@@ -4,7 +4,7 @@ import errno
 import stat
 import time
 
-import base.console
+import pfw.console
 
 
 
@@ -19,7 +19,7 @@ def file_time( file ):
 # def file_time
 
 def copy_recursively( _source_folder: str, _destination_folder: str ):
-   base.console.debug.trace( "Copying directory content from '", _source_folder, "' to '", _destination_folder, "'" )
+   pfw.console.debug.trace( "Copying directory content from '", _source_folder, "' to '", _destination_folder, "'" )
    for file_name in os.listdir( _source_folder ):
       source = os.path.join( _source_folder, file_name )
       destination = os.path.join( _destination_folder, file_name )
@@ -31,7 +31,7 @@ def copy_recursively( _source_folder: str, _destination_folder: str ):
          if err.errno == errno.ENOTDIR:
             shutil.copy2( source, destination )
          else:
-            base.console.debug.error( "%s" % err )
+            pfw.console.debug.error( "%s" % err )
 # def copy_recursively
 
 
@@ -39,12 +39,12 @@ def copy_recursively( _source_folder: str, _destination_folder: str ):
 # Example:
 #     clean_dir( "/home/Source", [ ".git", "git.py", "base.py", "console.py", "__pycache__" ] )
 def clean_dir( _dir: str, _exceptions: list = [ ] ):
-   base.console.debug.trace( "Cleaning directory: ", _dir )
+   pfw.console.debug.trace( "Cleaning directory: ", _dir )
    for file_name in os.listdir( _dir ):
       skip: bool = False
       for exception_file in _exceptions:
          if file_name == exception_file:
-            base.console.debug.warning( "skipping: ", file_name )
+            pfw.console.debug.warning( "skipping: ", file_name )
             skip = True
             continue
       if True == skip:
@@ -53,13 +53,13 @@ def clean_dir( _dir: str, _exceptions: list = [ ] ):
       file_path = os.path.join( _dir, file_name )
       try:
          if os.path.isfile( file_path ) or os.path.islink( file_path ):
-            base.console.debug.trace( "deleting file: ", file_path )
+            pfw.console.debug.trace( "deleting file: ", file_path )
             os.unlink( file_path )
          elif os.path.isdir( file_path ):
-            base.console.debug.trace( "deleting directory: ", file_path )
+            pfw.console.debug.trace( "deleting directory: ", file_path )
             shutil.rmtree( file_path )
       except Exception as e:
-         base.console.debug.error( 'Failed to delete %s. Reason: %s' % ( file_path, e ) )
+         pfw.console.debug.error( 'Failed to delete %s. Reason: %s' % ( file_path, e ) )
 # def clean_dir
 
 def current_dir( ):

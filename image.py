@@ -1,8 +1,8 @@
 import os
 
-import base.console
-import base.shell
-import base.size
+import pfw.console
+import pfw.shell
+import pfw.size
 
 
 
@@ -27,7 +27,7 @@ class Description:
    # def __setattr__
 
    def __str__( self ):
-      attr_list = [ i for i in Description.__dict__.keys( ) if i[:2] != base.base.class_ignore_field ]
+      attr_list = [ i for i in Description.__dict__.keys( ) if i[:2] != pfw.base.class_ignore_field ]
       vector = [ ]
       for attr in attr_list:
          vector.append( str( attr ) + " = " + str( self.__dict__.get( attr ) ) )
@@ -36,11 +36,11 @@ class Description:
    # def __str__
 
    def info( self, tabulations: int = 0 ):
-      base.console.debug.info( self.__class__.__name__, ":", tabs = ( tabulations + 0 ) )
-      base.console.debug.info( "file:         \'", self.__file, "\'", tabs = ( tabulations + 1 ) )
-      base.console.debug.info( "size:         \'", self.__size, "\'", tabs = ( tabulations + 1 ) )
-      base.console.debug.info( "mount point:  \'", self.__mount_point, "\'", tabs = ( tabulations + 1 ) )
-      base.console.debug.info( "fs:           \'", self.__fs, "\'", tabs = ( tabulations + 1 ) )
+      pfw.console.debug.info( self.__class__.__name__, ":", tabs = ( tabulations + 0 ) )
+      pfw.console.debug.info( "file:         \'", self.__file, "\'", tabs = ( tabulations + 1 ) )
+      pfw.console.debug.info( "size:         \'", self.__size, "\'", tabs = ( tabulations + 1 ) )
+      pfw.console.debug.info( "mount point:  \'", self.__mount_point, "\'", tabs = ( tabulations + 1 ) )
+      pfw.console.debug.info( "fs:           \'", self.__fs, "\'", tabs = ( tabulations + 1 ) )
    # def info
 
    def resize( self, size ):
@@ -91,7 +91,7 @@ class Partition:
    # def __setattr__
 
    def __str__( self ):
-      attr_list = [ i for i in Partition.__dict__.keys( ) if i[:2] != base.base.class_ignore_field ]
+      attr_list = [ i for i in Partition.__dict__.keys( ) if i[:2] != pfw.base.class_ignore_field ]
       vector = [ ]
       for attr in attr_list:
          vector.append( str( attr ) + " = " + str( self.__dict__.get( attr ) ) )
@@ -100,40 +100,40 @@ class Partition:
    # def __str__
 
    def info( self, tabulations: int = 0 ):
-      base.console.debug.info( self.__class__.__name__, ":", tabs = ( tabulations + 0 ) )
-      base.console.debug.info( "image:        \'", self.__file, "\'", tabs = ( tabulations + 1 ) )
-      base.console.debug.info( "mount point:  \'", self.__mount_point, "\'", tabs = ( tabulations + 1 ) )
+      pfw.console.debug.info( self.__class__.__name__, ":", tabs = ( tabulations + 0 ) )
+      pfw.console.debug.info( "image:        \'", self.__file, "\'", tabs = ( tabulations + 1 ) )
+      pfw.console.debug.info( "mount point:  \'", self.__mount_point, "\'", tabs = ( tabulations + 1 ) )
       self.__size.info( tabulations + 1 )
    # def info
 
-   def create( self, size: base.size.Size, force: bool = False ):
+   def create( self, size: pfw.size.Size, force: bool = False ):
       if None != self.__mount_point:
-         base.console.debug.error( "image mounted" )
+         pfw.console.debug.error( "image mounted" )
          return False
 
       if True == os.path.exists( self.__file ):
          if False == force:
-            base.console.debug.error( "file exists: ", self.__file )
+            pfw.console.debug.error( "file exists: ", self.__file )
             return False
          else:
-            base.console.debug.warning( "file exists: ", self.__file )
+            pfw.console.debug.warning( "file exists: ", self.__file )
             self.delete( )
 
       self.__size = size
-      self.__size.align( base.size.Size.eGran.M )
+      self.__size.align( pfw.size.Size.eGran.M )
 
-      result_code = base.shell.run_and_wait_with_status(
+      result_code = pfw.shell.run_and_wait_with_status(
               "dd"
             , "if=/dev/zero"
             , "of=" + self.__file
-            , "bs=" + str( int( base.size.Size.eGran.M ) )
+            , "bs=" + str( int( pfw.size.Size.eGran.M ) )
             , "count=" + str( self.__size.megabytes( ) )
          )["code"]
       return 0 == result_code
    # def create
 
    def delete( self ):
-      result_code = base.shell.run_and_wait_with_status( "rm", self.__file )["code"]
+      result_code = pfw.shell.run_and_wait_with_status( "rm", self.__file )["code"]
       return 0 == result_code
    # def delete
 
@@ -141,11 +141,11 @@ class Partition:
       if None == self.__file_system:
          raise self.MountError( "Partition is not formated: '%s'" % self.__file )
 
-      result_code = base.shell.run_and_wait_with_status( "sudo", "mkdir", "-p", mount_point )["code"]
+      result_code = pfw.shell.run_and_wait_with_status( "sudo", "mkdir", "-p", mount_point )["code"]
       if 0 != result_code:
          return False
 
-      result_code = base.shell.run_and_wait_with_status(
+      result_code = pfw.shell.run_and_wait_with_status(
               "sudo", "mount"
             , "-t", self.__file_system
             , self.__file
@@ -163,7 +163,7 @@ class Partition:
       if None == self.__mount_point:
          raise self.MountError( "Partition is not mounted: '%s'" % self.__file )
 
-      result_code = base.shell.run_and_wait_with_status(
+      result_code = pfw.shell.run_and_wait_with_status(
               "sudo", "umount"
             , self.__file
          )["code"]
@@ -175,7 +175,7 @@ class Partition:
    # def umount
 
    def format( self, file_system: str ):
-      result_code = base.shell.run_and_wait_with_status(
+      result_code = pfw.shell.run_and_wait_with_status(
             "mkfs"
             , "-t", file_system
             , self.__file
@@ -194,7 +194,7 @@ class Partition:
       if False == os.path.exists( source ):
          return 254
 
-      result_code = base.shell.run_and_wait_with_status(
+      result_code = pfw.shell.run_and_wait_with_status(
               "sudo", "cp"
             , source
             , os.path.join( self.__mount_point, destination )
@@ -209,7 +209,7 @@ class Partition:
       if None == self.__mount_point:
          return 255
 
-      result_code = base.shell.run_and_wait_with_status(
+      result_code = pfw.shell.run_and_wait_with_status(
               "sudo", "cp"
             , os.path.join( self.__mount_point, source )
             , destination
@@ -221,7 +221,7 @@ class Partition:
    # def copy_from
 
    def mkdir( self, dir: str ):
-      return base.shell.run_and_wait_with_status(
+      return pfw.shell.run_and_wait_with_status(
               "sudo", "mkdir", "-p"
             , os.path.join( self.__mount_point, dir )
          )["code"]
@@ -231,7 +231,7 @@ class Partition:
 
 
    __file: str = None
-   __size: base.size.Size = None
+   __size: pfw.size.Size = None
    __file_system: str = None
    __mount_point: str = None
 # class Partition
@@ -248,10 +248,10 @@ class Drive:
       def __init__( self, start: int, end: int, id_type: int = 83 ):
          self.__start = start
          self.__end = end
-         self.__size = base.size.Size( self.__end - self.__start + 1, base.size.Size.eGran.S )
+         self.__size = pfw.size.Size( self.__end - self.__start + 1, pfw.size.Size.eGran.S )
          self.__id_type = id_type
       # def __init__
-      def __init__( self, start: int, size: base.size.Size, id_type: int = 83 ):
+      def __init__( self, start: int, size: pfw.size.Size, id_type: int = 83 ):
          self.__start = start
          self.__size = size
          self.__end = self.__start + self.__size.sectors( ) -1 
@@ -271,7 +271,7 @@ class Drive:
       # def __setattr__
 
       def __str__( self ):
-         attr_list = [ i for i in Drive.Partition.__dict__.keys( ) if i[:2] != base.base.class_ignore_field ]
+         attr_list = [ i for i in Drive.Partition.__dict__.keys( ) if i[:2] != pfw.base.class_ignore_field ]
          vector = [ ]
          for attr in attr_list:
             vector.append( str( attr ) + " = " + str( self.__dict__.get( attr ) ) )
@@ -280,11 +280,11 @@ class Drive:
       # def __str__
 
       def info( self, tabulations: int = 0 ):
-         base.console.debug.info( self.__class__.__name__, ":", tabs = ( tabulations + 0 ) )
-         base.console.debug.info( "start:     \'", self.__start, "\'", tabs = ( tabulations + 1 ) )
-         base.console.debug.info( "end:       \'", self.__end, "\'", tabs = ( tabulations + 1 ) )
+         pfw.console.debug.info( self.__class__.__name__, ":", tabs = ( tabulations + 0 ) )
+         pfw.console.debug.info( "start:     \'", self.__start, "\'", tabs = ( tabulations + 1 ) )
+         pfw.console.debug.info( "end:       \'", self.__end, "\'", tabs = ( tabulations + 1 ) )
          self.__size.info( tabulations + 1 )
-         base.console.debug.info( "id type:   \'", self.__id_type, "\'", tabs = ( tabulations + 1 ) )
+         pfw.console.debug.info( "id type:   \'", self.__id_type, "\'", tabs = ( tabulations + 1 ) )
       # def info
 
       def start( self ):
@@ -305,7 +305,7 @@ class Drive:
 
       __start: int = None
       __end: int = None
-      __size: base.size.Size = None
+      __size: pfw.size.Size = None
       __id_type: int = None
    # class Partition
 
@@ -329,7 +329,7 @@ class Drive:
    # def __setattr__
 
    def __str__( self ):
-      attr_list = [ i for i in Drive.__dict__.keys( ) if i[:2] != base.base.class_ignore_field ]
+      attr_list = [ i for i in Drive.__dict__.keys( ) if i[:2] != pfw.base.class_ignore_field ]
       vector = [ ]
       for attr in attr_list:
          vector.append( str( attr ) + " = " + str( self.__dict__.get( attr ) ) )
@@ -338,40 +338,40 @@ class Drive:
    # def __str__
 
    def info( self, tabulations: int = 0 ):
-      base.console.debug.info( self.__class__.__name__, ":", tabs = ( tabulations + 0 ) )
-      base.console.debug.info( "file:      \'", self.__file, "\'", tabs = ( tabulations + 1 ) )
+      pfw.console.debug.info( self.__class__.__name__, ":", tabs = ( tabulations + 0 ) )
+      pfw.console.debug.info( "file:      \'", self.__file, "\'", tabs = ( tabulations + 1 ) )
       self.__size.info( tabulations + 1 )
-      base.console.debug.info( "attached:  \'", self.__attached_to, "\'", tabs = ( tabulations + 1 ) )
-      base.console.debug.info( "bootable:  \'", self.__bootable_index, "\'", tabs = ( tabulations + 1 ) )
+      pfw.console.debug.info( "attached:  \'", self.__attached_to, "\'", tabs = ( tabulations + 1 ) )
+      pfw.console.debug.info( "bootable:  \'", self.__bootable_index, "\'", tabs = ( tabulations + 1 ) )
       for index in range( len( self.__partitions ) ):
          self.__partitions[index].info( tabulations + 1 )
    # def info
 
-   def create( self, size: base.size.Size, force: bool = False ):
+   def create( self, size: pfw.size.Size, force: bool = False ):
       if None != self.__attached_to:
-         base.console.debug.error( "image attached" )
+         pfw.console.debug.error( "image attached" )
          return False
 
       if True == os.path.exists( self.__file ):
          if False == force:
-            base.console.debug.error( "file exists: ", self.__file )
+            pfw.console.debug.error( "file exists: ", self.__file )
             return False
          else:
-            base.console.debug.warning( "file exists: ", self.__file )
+            pfw.console.debug.warning( "file exists: ", self.__file )
             self.delete( )
 
       self.__size = size
-      self.__size.align( base.size.Size.eGran.M )
+      self.__size.align( pfw.size.Size.eGran.M )
 
-      result_code = base.shell.run_and_wait_with_status(
+      result_code = pfw.shell.run_and_wait_with_status(
               "dd"
             , "if=/dev/zero"
             , "of=" + self.__file
-            , "bs=" + str( int( base.size.Size.eGran.M ) )
+            , "bs=" + str( int( pfw.size.Size.eGran.M ) )
             , "count=" + str( self.__size.megabytes( ) )
          )["code"]
       if 0 != result_code:
-         base.console.debug.error( "image can't be created(%s): (%d)" % ( self.__file, result_code ) )
+         pfw.console.debug.error( "image can't be created(%s): (%d)" % ( self.__file, result_code ) )
          self.__size = None
          return False
 
@@ -383,9 +383,9 @@ class Drive:
          if False == self.detach( ):
             return False
 
-      result_code = base.shell.run_and_wait_with_status( "rm", self.__file )["code"]
+      result_code = pfw.shell.run_and_wait_with_status( "rm", self.__file )["code"]
       if 0 != result_code:
-         base.console.debug.error( "image can't be deleted(%s): (%d)" % ( self.__file, result_code ) )
+         pfw.console.debug.error( "image can't be deleted(%s): (%d)" % ( self.__file, result_code ) )
          return False
 
       self.__size = None
@@ -394,20 +394,20 @@ class Drive:
 
    def attach( self ):
       if None != self.__attached_to:
-         base.console.debug.error( "image '%s' is attached to '%s'" % ( self.__file, self.__attached_to ) )
+         pfw.console.debug.error( "image '%s' is attached to '%s'" % ( self.__file, self.__attached_to ) )
          return False
 
-      result = base.shell.run_and_wait_with_status( "sudo", "losetup", "-f" )
+      result = pfw.shell.run_and_wait_with_status( "sudo", "losetup", "-f" )
       if 0 != result["code"]:
-         base.console.debug.error( "free loop device was not find" )
+         pfw.console.debug.error( "free loop device was not find" )
          return False
       attach_to: str = result["output"]
 
-      result_code = base.shell.run_and_wait_with_status(
+      result_code = pfw.shell.run_and_wait_with_status(
             "sudo", "losetup", "-v", "-P", attach_to, self.__file
          )["code"]
       if 0 != result_code:
-         base.console.debug.error( "image attach error to device(%s): (%d)" % ( attach_to, result_code ) )
+         pfw.console.debug.error( "image attach error to device(%s): (%d)" % ( attach_to, result_code ) )
          return False
 
       self.__attached_to = attach_to
@@ -416,12 +416,12 @@ class Drive:
 
    def detach( self ):
       if None == self.__attached_to:
-         base.console.debug.error( "image '%s' is not attached" % self.__file )
+         pfw.console.debug.error( "image '%s' is not attached" % self.__file )
          return False
 
       self.umount( )
 
-      result_code = base.shell.run_and_wait_with_status( "sudo", "losetup", "-d", self.__attached_to )["code"]
+      result_code = pfw.shell.run_and_wait_with_status( "sudo", "losetup", "-d", self.__attached_to )["code"]
       if 0 != result_code:
          return False
 
@@ -431,19 +431,19 @@ class Drive:
 
    def init( self, partitions: list, bootable_index: int = 0 ):
       if None == self.__attached_to:
-         base.console.debug.error( "image '%s' is not attached" % self.__file )
+         pfw.console.debug.error( "image '%s' is not attached" % self.__file )
          return False
 
-      common_size: base.size.Size = base.size.Size( 2048, base.size.Size.eGran.S ) # first 2048 reserved sectors
+      common_size: pfw.size.Size = pfw.size.Size( 2048, pfw.size.Size.eGran.S ) # first 2048 reserved sectors
       for partition in partitions:
-         partition["size"].align( base.size.Size.eGran.S )
+         partition["size"].align( pfw.size.Size.eGran.S )
          common_size += partition["size"]
 
       if common_size > self.__size:
-         base.console.debug.error( "oversize" )
+         pfw.console.debug.error( "oversize" )
          return False
 
-      base.shell.run_and_wait_with_status( "mkdir", "-p" , "/tmp/loop" )["code"]
+      pfw.shell.run_and_wait_with_status( "mkdir", "-p" , "/tmp/loop" )["code"]
 
       self.__bootable_index = bootable_index
 
@@ -473,7 +473,7 @@ class Drive:
 
       # Apply partition table using 'sfdisk' command
       commands: str = "sudo sfdisk " + self.__attached_to + " < /tmp/loop/dump"
-      base.console.debug.header( commands )
+      pfw.console.debug.header( commands )
       os.system( commands )
 
       # Format all partitions
@@ -484,13 +484,13 @@ class Drive:
    # def init
 
    def format( self, partition: int, file_system: str ):
-      result_code = base.shell.run_and_wait_with_status(
+      result_code = pfw.shell.run_and_wait_with_status(
               "sudo", "mkfs"
             , "-t", file_system
             , self.__attached_to + "p" + str(partition)
          )["code"]
       if 0 != result_code:
-         base.console.debug.error( "partition '%s' format error: %d" % ( self.__attached_to + "p" + str(partition), result_code ) )
+         pfw.console.debug.error( "partition '%s' format error: %d" % ( self.__attached_to + "p" + str(partition), result_code ) )
          return False
 
       return True
@@ -501,21 +501,21 @@ class Drive:
       # https://superuser.com/questions/694430/how-to-inspect-disk-image
 
       if None == self.__attached_to:
-         base.console.debug.error( "image '%s' is not attached" % self.__file )
+         pfw.console.debug.error( "image '%s' is not attached" % self.__file )
          return False
 
-      result_code = base.shell.run_and_wait_with_status( "sudo", "mkdir", "-p", mount_point )["code"]
+      result_code = pfw.shell.run_and_wait_with_status( "sudo", "mkdir", "-p", mount_point )["code"]
       if 0 != result_code:
-         base.console.debug.error( "create directory '%s' error: %d" % ( mount_point, result_code ) )
+         pfw.console.debug.error( "create directory '%s' error: %d" % ( mount_point, result_code ) )
          return False
 
-      result_code = base.shell.run_and_wait_with_status(
+      result_code = pfw.shell.run_and_wait_with_status(
               "sudo", "mount"
             , self.__attached_to + "p" + str(partition)
             , mount_point
          )["code"]
       if 0 != result_code:
-         base.console.debug.error( "mount partition '%s' to directory '%s' error: %d" % ( self.__attached_to + "p" + str(index), mount_point, result_code ) )
+         pfw.console.debug.error( "mount partition '%s' to directory '%s' error: %d" % ( self.__attached_to + "p" + str(index), mount_point, result_code ) )
          return False
 
       return True
@@ -523,7 +523,7 @@ class Drive:
 
    def umount( self, partition: int = None ):
       if None == self.__attached_to:
-         base.console.debug.error( "image '%s' is not attached" % self.__file )
+         pfw.console.debug.error( "image '%s' is not attached" % self.__file )
          return False
 
       indexes: list = [ ]
@@ -534,11 +534,11 @@ class Drive:
 
       result_code: bool = True
       for index in indexes:
-         result_umount = base.shell.run_and_wait_with_status(
+         result_umount = pfw.shell.run_and_wait_with_status(
                  "sudo", "umount", self.__attached_to + "p" + str(index)
             )["code"]
          if 0 != result_umount:
-            base.console.debug.error( "umount partition '%s' error: %d" % ( self.__attached_to + "p" + str(index), result_umount ) )
+            pfw.console.debug.error( "umount partition '%s' error: %d" % ( self.__attached_to + "p" + str(index), result_umount ) )
             result_code = False
 
       return result_code
@@ -549,7 +549,7 @@ class Drive:
 
 
    __file: str = None
-   __size: base.size.Size = None
+   __size: pfw.size.Size = None
    __attached_to: int = None
    __partitions: list = [ ]
    __bootable_index: int = None

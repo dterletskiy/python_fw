@@ -1,6 +1,6 @@
 from enum import IntEnum
 
-import base.console
+import pfw.console
 
 
 
@@ -30,7 +30,7 @@ class Size:
    # def __setattr__
 
    def __str__( self ):
-      attr_list = [ i for i in Size.__dict__.keys( ) if i[:2] != base.base.class_ignore_field ]
+      attr_list = [ i for i in Size.__dict__.keys( ) if i[:2] != pfw.base.class_ignore_field ]
       vector = [ ]
       for attr in attr_list:
          vector.append( str( attr ) + " = " + str( self.__dict__.get( attr ) ) )
@@ -83,9 +83,9 @@ class Size:
    # def __eq__
 
    def info( self, tabulations: int = 0 ):
-      base.console.debug.info( self.__class__.__name__, ":", tabs = ( tabulations + 0 ) )
-      base.console.debug.info( "bytes:     \'", self.__bytes, "\'", tabs = ( tabulations + 1 ) )
-      base.console.debug.info( "sectors:   \'", self.sectors( ), "\'", tabs = ( tabulations + 1 ) )
+      pfw.console.debug.info( self.__class__.__name__, ":", tabs = ( tabulations + 0 ) )
+      pfw.console.debug.info( "bytes:     \'", self.__bytes, "\'", tabs = ( tabulations + 1 ) )
+      pfw.console.debug.info( "sectors:   \'", self.sectors( ), "\'", tabs = ( tabulations + 1 ) )
    # def info
 
    def align( self, gran: eGran = eGran.S ): 

@@ -2,7 +2,7 @@ import git
 from git import RemoteProgress
 from tqdm import tqdm
 
-import base.console
+import pfw.console
 
 ignore_field = "__"
 
@@ -18,14 +18,14 @@ class CloneProgress( RemoteProgress ):
 
    def updat1( self, op_code, cur_count, max_count=None, message='' ):
       if message:
-         base.console.debug.info( message )
+         pfw.console.debug.info( message )
 
    def updat2( self, op_code, cur_count, max_count=None, message='' ):
       if message:
-         base.console.debug.info( 'update(%s, %s, %s, %s)' % (op_code, cur_count, max_count, message) )
+         pfw.console.debug.info( 'update(%s, %s, %s, %s)' % (op_code, cur_count, max_count, message) )
 
    def updat3( self, op_code, cur_count, max_count=None, message='' ):
-      base.console.debug.info( op_code, cur_count, max_count, cur_count / (max_count or 100.0), message or "NO MESSAGE" )
+      pfw.console.debug.info( op_code, cur_count, max_count, cur_count / (max_count or 100.0), message or "NO MESSAGE" )
 
    def update4( self, op_code, cur_count, max_count=None, message='' ):
       self.pbar.total = max_count
@@ -51,8 +51,8 @@ class CloneProgress( RemoteProgress ):
 # import errno
 # import ntpath
 
-# import base.console
-# import base.file
+# import pfw.console
+# import pfw.file
 
 
 
@@ -67,15 +67,15 @@ class CloneProgress( RemoteProgress ):
 # for archive in os.listdir( archive_path ):
 #    archive_directories.append( os.path.join( archive_path, archive ) )
 # archive_directories.sort( )
-# base.console.debug.info( "root: ", archive_directories )
+# pfw.console.debug.info( "root: ", archive_directories )
 
 
 # os.system( git + "init" )
 # os.system( git + "commit --allow-empty -m 'Initial commit'" )
 # for archive_directory in archive_directories:
-#    base.console.debug.info( "---------- Processing: ", archive_directory, " ----------" )
-#    base.file.clean_dir( project_path, exceptions )
-#    base.file.copy_recursively( archive_directory, project_path )
+#    pfw.console.debug.info( "---------- Processing: ", archive_directory, " ----------" )
+#    pfw.file.clean_dir( project_path, exceptions )
+#    pfw.file.copy_recursively( archive_directory, project_path )
 #    os.system( git + "add ." )
 #    os.system( git + "status" )
 #    os.system( git + "commit -m 'version " + ntpath.basename( archive_directory ) + "'" )

@@ -1,7 +1,7 @@
 import shutil
 import datetime
 
-import base.console
+import pfw.console
 
 
 
@@ -9,7 +9,7 @@ import base.console
 
 def archive( dir_name: str, format: str = "zip" ):
    output_filename: str = dir_name + "_" + datetime.datetime.now( ).strftime( "%Y-%m-%d_%H-%M-%S" )
-   base.console.debug.info( "date and time =", output_filename )
+   pfw.console.debug.info( "date and time =", output_filename )
    if "all" == format:
       shutil.make_archive( output_filename, "zip", dir_name )
       shutil.make_archive( output_filename, "tar", dir_name )
@@ -21,6 +21,6 @@ def archive( dir_name: str, format: str = "zip" ):
 # def archive
 
 def extract( archive: str, format: str, to: str ):
-   base.console.debug.info( "extracting '", archive, "' to '", to, "'" )
+   pfw.console.debug.info( "extracting '", archive, "' to '", to, "'" )
    shutil.unpack_archive( archive, to, format )
 # def extract

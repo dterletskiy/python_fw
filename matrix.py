@@ -1,13 +1,13 @@
 import numpy as np
 import scipy.special as sp
 
-import base.console
+import pfw.console
 
 
 
 def info( matrix: np.array ):
-   base.console.debug.info( "dimentions: ", matrix.ndim )
-   base.console.debug.info( "shape: ", matrix.shape )
+   pfw.console.debug.info( "dimentions: ", matrix.ndim )
+   pfw.console.debug.info( "shape: ", matrix.shape )
 # def info
 
 def is_square( matrix: np.array ):

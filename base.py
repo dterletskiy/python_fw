@@ -3,7 +3,7 @@ import stat
 import time
 import requests
 
-import base.console
+import pfw.console
 
 
 
@@ -32,7 +32,7 @@ def class_attributes( cls ):
 
 def string_to_int( string: str, exit_code: int = 1 ) -> int:
    if str != type( string ):
-      base.console.debug.error( "value is not a string: ", string )
+      pfw.console.debug.error( "value is not a string: ", string )
       if 0 != exit_code: exit( exit_code )
       else: return None
 
@@ -40,7 +40,7 @@ def string_to_int( string: str, exit_code: int = 1 ) -> int:
       number = int( string )
       return number
    except ValueError:
-      base.console.debug.error( "wrong string value: ", string )
+      pfw.console.debug.error( "wrong string value: ", string )
       if 0 != exit_code: exit( exit_code )
       else: return None
 
@@ -77,5 +77,5 @@ def download( url: str, to: str ):
       for chunk in request.iter_content( chunk_size = 10 * 1024 * 1024 ):
          file.write( chunk )
          count += 1
-         base.console.debug.trace( "downloaded: ", 10 * count, "MB" )
+         pfw.console.debug.trace( "downloaded: ", 10 * count, "MB" )
 # def download
