@@ -1,3 +1,7 @@
+import inspect
+
+
+
 CSI = '\033['
 OSC = '\033]'
 BEL = '\007'
@@ -154,7 +158,11 @@ class AnsiDebug:
 
       if True == self.__is_colored:
          string += Format.RESET
-      print( string )
+
+      frame = inspect.stack( )[2]
+      # header: str = "[" + frame.filename + ":" + frame.function + ":" + str(frame.lineno) + "] -> "
+      header: str = "[" + frame.function + ":" + str(frame.lineno) + "] -> "
+      print( header, string )
 
    def promt( self, string: str = "Press any key..." ):
       if True == self.__is_colored:
