@@ -1,3 +1,4 @@
+import sys
 import inspect
 
 
@@ -146,13 +147,17 @@ class AnsiDebug:
       self.write( Format.ERROR, *arguments, **kwargs )
 
    def write( self, ansi_format, *arguments, **kwargs ):
-      tabs: int = kwargs.get( "tabs", 0 )
+      kw_tabs: int = kwargs.get( "tabs", 0 )
+      kw_end: str = kwargs.get( "end", "\n" )
+      kw_sep: str = kwargs.get( "sep", " " )
+      kw_flush: bool = kwargs.get( "flush", False )
+      kw_file = kwargs.get( "file", sys.stdout )
 
       string: str = ""
       if True == self.__is_colored:
          string: str = ansi_format
 
-      string += tabs * "   "
+      string += kw_tabs * "   "
       for argument in arguments:
          string += str( argument )
 
@@ -162,7 +167,7 @@ class AnsiDebug:
       frame = inspect.stack( )[2]
       # header: str = "[" + frame.filename + ":" + frame.function + ":" + str(frame.lineno) + "] -> "
       header: str = "[" + frame.function + ":" + str(frame.lineno) + "] -> "
-      print( header, string )
+      print( header, string, end = kw_end, sep = kw_sep, flush = kw_flush, file = kw_file )
 
    def promt( self, string: str = "Press any key..." ):
       if True == self.__is_colored:
