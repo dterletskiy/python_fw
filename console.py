@@ -119,8 +119,9 @@ Format            = AnsiFormat( )
 
 
 class AnsiDebug:
-   def __init__( self, is_colored: bool = True ):
+   def __init__( self, is_colored: bool, inspect: int ):
       self.__is_colored = is_colored
+      self.__inspect = inspect
 
    def header( self, *arguments, **kwargs ):
       self.write( Format.HEADER, *arguments, **kwargs )
@@ -148,8 +149,9 @@ class AnsiDebug:
 
    def write( self, ansi_format, *arguments, **kwargs ):
       kw_tabs: int = kwargs.get( "tabs", 0 )
-      kw_end: str = kwargs.get( "end", "\n" )
-      kw_sep: str = kwargs.get( "sep", " " )
+      kw_inspect: int = kwargs.get( "inspect", self.__inspect )
+      kw_end: str = kwargs.get( "end", '\n' )
+      kw_sep: str = kwargs.get( "sep", '' )
       kw_flush: bool = kwargs.get( "flush", False )
       kw_file = kwargs.get( "file", sys.stdout )
 
@@ -164,9 +166,14 @@ class AnsiDebug:
       if True == self.__is_colored:
          string += Format.RESET
 
-      frame = inspect.stack( )[2]
-      # header: str = "[" + frame.filename + ":" + frame.function + ":" + str(frame.lineno) + "] -> "
-      header: str = "[" + frame.function + ":" + str(frame.lineno) + "] -> "
+      header: str = ""
+      if 1 == kw_inspect:
+         frame = inspect.stack( )[2]
+         header = "[" + frame.function + ":" + str(frame.lineno) + "] -> "
+      elif 2 == kw_inspect:
+         frame = inspect.stack( )[2]
+         header = "[" + frame.filename + ":" + frame.function + ":" + str(frame.lineno) + "] -> "
+
       print( header, string, end = kw_end, sep = kw_sep, flush = kw_flush, file = kw_file )
 
    def promt( self, string: str = "Press any key..." ):
@@ -181,7 +188,9 @@ class AnsiDebug:
       return _is_colored
 
    __is_colored: bool = True
+   __inspect: int = 0
 
-debug             = AnsiDebug( True )
+printf            = AnsiDebug( True, 0 )
+debug             = AnsiDebug( True, 1 )
 
 
