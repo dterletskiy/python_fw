@@ -67,6 +67,28 @@ def to_string( container, new_line = True ):
 
    return string
 
+# Split string by multiple separators
+# Example:
+#     multiple_split( string, "<>, " )
+def multiple_split( string: str, separators: str ):
+   string_list: list = [ string ]
+   for separator in separators:
+      new_string_list: list = [ ]
+      for item_string in string_list:
+         l = item_string.split( separator )
+         if 1 == len(l):
+            new_string_list.extend( l )
+            continue
+         for count in range( len(l) ):
+            # if 0 == len(l[count]): continue
+            new_string_list.append( l[count] )
+            if count + 1 < len(l):
+               new_string_list.append( separator )
+      string_list = new_string_list
+
+   return string_list
+# def multiple_split
+
 def download( url: str, to: str ):
    file_name = url.split('/')[-1]
 
