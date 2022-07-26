@@ -27,11 +27,15 @@ def output_to_stdout( output: eOutput ):
 
 # Example:
 # pfw.shell.run_and_wait_with_status( 'ping', '-c 4', 'python.org' )
-def run_and_wait_with_status( command: str, *arguments, **kwargs ):
+def run_and_wait_with_status( command: str, *argv, **kwargs ):
+   kw_args = kwargs.get( "args", [ ] )
    kw_test = kwargs.get( "test", False )
    kw_env = kwargs.get( "env", None )
    kw_shell = kwargs.get( "shell", False )
    kw_output = kwargs.get( "output", eOutput.runtime )
+
+   arguments: list = list( argv )
+   arguments.extend( kw_args )
 
 
 
