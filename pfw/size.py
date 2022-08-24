@@ -13,8 +13,13 @@ class Size:
       S = 512
    # class eGran
 
-   def __init__( self, value: int, gran: eGran = eGran.B ):
+   def __init__( self, value: int, gran: eGran = eGran.B, **kwargs ):
+      kw_align = kwargs.get( "align", None )
+
       self.__bytes = value * gran
+
+      if None != kw_align:
+         self.align( kw_align )
    # def __init__
 
    def __del__( self ):
@@ -39,27 +44,28 @@ class Size:
    # def __str__
 
    def __add__( self, other ):
-      return self.__bytes + other.__bytes
+      size_bytes = self.__bytes + other.__bytes
+      return Size( size_bytes, Size.eGran.B )
    # def __add__
 
    def __sub__( self, other ):
-      result: int = self.__bytes - other.__bytes
-      if 0 > result:
-         return 0
-      return result
+      size_bytes = self.__bytes - other.__bytes
+      if 0 > size_bytes:
+         size_bytes = 0
+      return Size( size_bytes, Size.eGran.B )
    # def __sub__
 
    def __iadd__( self, other ):
       self.__bytes += other.__bytes
       return self
-   # def __add__
+   # def __iadd__
 
    def __isub__( self, other ):
       self.__bytes -= other.__bytes
       if 0 > self.__bytes:
          self.__bytes = 0
       return self
-   # def __sub__
+   # def __isub__
 
    def __gt__( self, other ):
       if self.__bytes > other.__bytes:
@@ -76,16 +82,21 @@ class Size:
    # def __lt__
 
    def __eq__( self, other ):
+      if None == other:
+         return False
+
       if self.__bytes == other.__bytes:
          return True
-      else:
-         return False
+
+      return False
    # def __eq__
 
    def info( self, tabulations: int = 0 ):
       pfw.console.debug.info( self.__class__.__name__, ":", tabs = ( tabulations + 0 ) )
       pfw.console.debug.info( "bytes:     \'", self.__bytes, "\'", tabs = ( tabulations + 1 ) )
       pfw.console.debug.info( "sectors:   \'", self.sectors( ), "\'", tabs = ( tabulations + 1 ) )
+      pfw.console.debug.info( "kilobytes: \'", self.kilobytes( ), "\'", tabs = ( tabulations + 1 ) )
+      pfw.console.debug.info( "megabytes: \'", self.megabytes( ), "\'", tabs = ( tabulations + 1 ) )
    # def info
 
    def align( self, gran: eGran = eGran.S ): 
@@ -97,19 +108,19 @@ class Size:
 
    def bytes( self ):
       return self.__bytes
-   # def start
+   # def bytes
 
    def kilobytes( self ):
       return self.__bytes // Size.eGran.K
-   # def start
+   # def kilobytes
 
    def megabytes( self ):
       return self.__bytes // Size.eGran.M
-   # def start
+   # def megabytes
 
    def gigabytes( self ):
       return self.__bytes // Size.eGran.G
-   # def start
+   # def gigabytes
 
    def sectors( self ):
       return self.__bytes // Size.eGran.S
@@ -117,3 +128,42 @@ class Size:
 
    __bytes: int = None
 # class Size
+
+SizeZero       = Size( 0 )
+SizeByte       = Size( 1, Size.eGran.B )
+SizeKilobyte   = Size( 1, Size.eGran.K )
+SizeMegabyte   = Size( 1, Size.eGran.M )
+SizeGigabyte   = Size( 1, Size.eGran.G )
+SizeSector     = Size( 1, Size.eGran.S )
+
+
+
+def min( *argv ):
+   min_value: Size = argv[0]
+   for item in argv:
+      if min_value > item:
+         min_value = item
+
+   return min_value
+# def min
+
+def max( *argv ):
+   max_value: Size = argv[0]
+   for item in argv:
+      if max_value < item:
+         max_value = item
+
+   return max_value
+# def max
+
+def min_max( *argv ):
+   min_value: Size = argv[0]
+   max_value: Size = argv[0]
+   for item in argv:
+      if min_value > item:
+         min_value = item
+      if max_value < item:
+         max_value = item
+
+   return [ min_value, max_value ]
+# def min_max

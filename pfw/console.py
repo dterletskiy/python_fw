@@ -106,7 +106,7 @@ class AnsiFormat:
    QUESTION       = Foreground.MAGENTA
    PROMT          = Foreground.MAGENTA
    INTERACTION    = Foreground.MAGENTA
-   HEADER         = Foreground.LIGHTBLUE
+   HEADER         = Foreground.LIGHTMAGENTA
    TRACE          = Foreground.RESET
    INFO           = Foreground.LIGHTYELLOW
    OK             = Foreground.GREEN
@@ -147,10 +147,13 @@ class AnsiDebug:
    def error( self, *arguments, **kwargs ):
       self.write( Format.ERROR, *arguments, **kwargs )
 
+   def marker( self, *arguments, **kwargs ):
+      self.write( Format.ERROR, "-------------------------", *arguments, "-------------------------", **kwargs )
+
    def write( self, ansi_format, *arguments, **kwargs ):
       kw_tabs: int = kwargs.get( "tabs", 0 )
       kw_inspect: int = kwargs.get( "inspect", self.__inspect )
-      kw_end: str = kwargs.get( "end", '\n' )
+      kw_end: str = kwargs.get( "end", '\n\r' )
       kw_sep: str = kwargs.get( "sep", '' )
       kw_flush: bool = kwargs.get( "flush", False )
       kw_file = kwargs.get( "file", sys.stdout )
@@ -175,6 +178,8 @@ class AnsiDebug:
          header = "[" + frame.filename + ":" + frame.function + ":" + str(frame.lineno) + "] -> "
 
       print( header, string, end = kw_end, sep = kw_sep, flush = kw_flush, file = kw_file )
+      # sys.stdout.write( header + string + "\n\r" )
+      # sys.stdout.flush( )
 
    def promt( self, string: str = "Press any key..." ):
       if True == self.__is_colored:

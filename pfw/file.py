@@ -3,10 +3,29 @@ import shutil
 import errno
 import stat
 import time
+import filetype
+import enum
 
 import pfw.console
 
 
+
+# https://github.com/h2non/filetype.py
+# https://github.com/ahupp/python-magic
+# https://docs.python.org/3/library/imghdr.html
+def universal_info( file ): # @TDA: to do
+   if False == os.path.exists( file ):
+      pfw.console.debug.error( "File does not exist: '%s'" % file )
+      return
+
+   kind = filetype.guess( file )
+   if kind is None:
+      pfw.console.debug.error( "Cannot guess file type: '%s'" % file )
+   else:
+      pfw.console.debug.warning( "'%s'" % ( file ) )
+      pfw.console.debug.warning( "   extension: '%s'" % kind.extension )
+      pfw.console.debug.warning( "   MIME type: '%s'" % kind.mime )
+# def universal_info
 
 def file_time( file ):
    try:
