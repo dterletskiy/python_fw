@@ -50,14 +50,71 @@ def format( file_name: str, file_system: str ):
    return 0 == pfw.shell.run_and_wait_with_status( command, output = pfw.shell.eOutput.PTY )["code"]
 # def format
 
+def mount( file: str, mount_point: str, fs: str = None ):
+   result_code = pfw.shell.run_and_wait_with_status( f"sudo -S mkdir -p {mount_point}", output = pfw.shell.eOutput.PTY )["code"]
+   if 0 != result_code:
+      pfw.console.debug.error( "create directory '%s' error: %d" % ( mount_point, result_code ) )
+      return False
 
+   command: str = f"sudo -S mount"
+   if None != fs:
+      command += f" -t {fs}"
+   command += f" {file} {mount_point}"
+   command += f" -o loop"
+
+   result_code = pfw.shell.run_and_wait_with_status( command, output = pfw.shell.eOutput.PTY )["code"]
+   if 0 != result_code:
+      pfw.console.debug.error( "mount file '%s' to directory '%s' error: '%s'" % ( file, mount_point, result_code ) )
+      return False
+
+   return True
+# def mount
+
+def umount( file: str ):
+   command: str = f"sudo -S umount {file}"
+
+   result_code = pfw.shell.run_and_wait_with_status( command, output = pfw.shell.eOutput.PTY )["code"]
+   if 0 != result_code:
+      pfw.console.debug.error( "umount file '%s' error: '%s'" % ( file, result_code ) )
+      return False
+
+   return True
+# def umount
+
+def attach( file: str ):
+   command: str = f"sudo -S losetup --find --show {file}"
+
+   result = pfw.shell.run_and_wait_with_status( command, output = pfw.shell.eOutput.PTY )
+   if 0 != result["code"]:
+      pfw.console.debug.error( "attach file '%s' error: '%s'" % ( file, result["code"] ) )
+      return None
+
+   pfw.console.debug.info( "file '%s' attached to '%s'" % ( file, result["output"] ) )
+   return result["output"]
+# def attach
+
+def detach( device: str ):
+   command: str = f"sudo -S losetup --detach {device}"
+
+   result_code = pfw.shell.run_and_wait_with_status( command, output = pfw.shell.eOutput.PTY )["code"]
+   if 0 != result_code:
+      pfw.console.debug.error( "detach device '%s' error: '%s'" % ( device, result_code ) )
+      return False
+
+   pfw.console.debug.info( "device '%s' detached" % ( device ) )
+   return True
+# def detach
+
+
+
+ALIGN_SIZE: pfw.size.Size.eGran = pfw.size.Size.eGran.M
 
 class Description:
    def __init__( self, file: str, mount_point: str, size: str, fs: str ):
-      self.__file = file
-      self.__mount_point = mount_point
-      self.__size = size
-      self.__fs = fs
+      self.__file = copy.deepcopy( file )
+      self.__mount_point = copy.deepcopy( mount_point )
+      self.__size = copy.deepcopy( size ).align( ALIGN_SIZE )
+      self.__fs = copy.deepcopy( fs )
    # def __init__
 
    def __del__( self ):
@@ -119,8 +176,8 @@ class Partition:
    class FormatError( TypeError ): pass
    class MountError( TypeError ): pass
 
-   def __init__( self, file: str ):
-      self.__file = file
+   def __init__( self, description: Description ):
+      self.__description = copy.deepcopy( description )
    # def __init__
 
    def __del__( self ):
@@ -146,97 +203,83 @@ class Partition:
 
    def info( self, tabulations: int = 0 ):
       pfw.console.debug.info( self.__class__.__name__, ":", tabs = ( tabulations + 0 ) )
-      pfw.console.debug.info( "image:        \'", self.__file, "\'", tabs = ( tabulations + 1 ) )
-      pfw.console.debug.info( "mount point:  \'", self.__mount_point, "\'", tabs = ( tabulations + 1 ) )
-      self.__size.info( tabulations + 1 )
+      self.__description.info( tabulations + 1 )
+      pfw.console.debug.info( "formatted to:    \'", self.__formatted_to, "\'", tabs = ( tabulations + 1 ) )
+      pfw.console.debug.info( "mounted to:      \'", self.__mounted_to, "\'", tabs = ( tabulations + 1 ) )
    # def info
 
-   def create( self, size: pfw.size.Size, force: bool = False ):
-      if None != self.__mount_point:
+   def create( self, force: bool = False ):
+      if None != self.__mounted_to:
          pfw.console.debug.error( "image mounted" )
          return False
 
-      if True == os.path.exists( self.__file ):
+      if True == os.path.exists( self.__description.file( ) ):
          if False == force:
-            pfw.console.debug.error( "file exists: ", self.__file )
+            pfw.console.debug.error( "file '%s' exists" % self.__description.file( ) )
             return False
          else:
-            pfw.console.debug.warning( "file exists: ", self.__file )
+            pfw.console.debug.warning( "file '%s' exists, but will be deleted" % self.__description.file( ) )
             self.delete( )
-
-      self.__size = size
-      self.__size.align( pfw.size.Size.eGran.M )
 
       result_code = pfw.shell.run_and_wait_with_status(
               "dd"
             , "if=/dev/zero"
-            , "of=" + self.__file
+            , "of=" + self.__description.file( )
             , "bs=" + str( int( pfw.size.Size.eGran.M ) )
-            , "count=" + str( self.__size.megabytes( ) )
+            , "count=" + str( self.__description.size( ).megabytes( ) )
          )["code"]
       return 0 == result_code
    # def create
 
    def delete( self ):
-      result_code = pfw.shell.run_and_wait_with_status( "rm", self.__file )["code"]
+      result_code = pfw.shell.run_and_wait_with_status( "rm", self.__description.file( ) )["code"]
       return 0 == result_code
    # def delete
 
-   def mount( self, mount_point: str ):
-      if None == self.__file_system:
-         raise self.MountError( "Partition is not formated: '%s'" % self.__file )
+   def mount( self, **kwargs ):
+      kw_mount_point = kwargs.get( "mount_point", self.__description.mount_point( ) )
 
-      result_code = pfw.shell.run_and_wait_with_status( "sudo", "mkdir", "-p", mount_point )["code"]
-      if 0 != result_code:
+      if None == self.__formatted_to:
+         raise self.MountError( "Partition is not formated: '%s'" % self.__description.file( ) )
+
+      if False == mount( self.__description.file( ), kw_mount_point, self.__formatted_to ):
          return False
 
-      result_code = pfw.shell.run_and_wait_with_status(
-              "sudo", "mount"
-            , "-t", self.__file_system
-            , self.__file
-            , mount_point
-            , "-o", "loop"
-         )["code"]
-      if 0 != result_code:
-         return False
-
-      self.__mount_point = mount_point
+      self.__mounted_to = kw_mount_point
       return True
    # def mount
 
    def umount( self ):
-      if None == self.__mount_point:
-         raise self.MountError( "Partition is not mounted: '%s'" % self.__file )
+      if None == self.__mounted_to:
+         raise self.MountError( "Partition is not mounted: '%s'" % self.__description.file( ) )
 
-      result_code = pfw.shell.run_and_wait_with_status(
-              "sudo", "umount"
-            , self.__file
-         )["code"]
-      if 0 != result_code:
+      if False == umount( self.__description.file( ) ):
          return False
 
-      self.__mount_point = None
+      self.__mounted_to = None
       return True
    # def umount
 
-   def format( self, file_system: str ):
-      result = format ( self.__file, file_system )
+   def format( self, **kwargs ):
+      kw_file_system = kwargs.get( "file_system", self.__description.fs( ) )
+
+      result = format ( self.__description.file( ), kw_file_system )
       if True == result:
-         self.__file_system = file_system
+         self.__formatted_to = kw_file_system
       return result
    # def format
 
    def copy_to( self, source: str, destination: str = "" ):
-      if None == self.__mount_point:
-         return 255
+      if None == self.__mounted_to:
+         return False
 
       if False == os.path.exists( source ):
-         return 254
+         return False
 
       result_code = pfw.shell.run_and_wait_with_status(
               "sudo", "cp"
             , source
-            , os.path.join( self.__mount_point, destination )
+            , os.path.join( self.__mounted_to, destination )
          )["code"]
       if 0 != result_code:
          return False
@@ -245,12 +288,12 @@ class Partition:
    # def copy_to
 
    def copy_from( self, source: str, destination: str ):
-      if None == self.__mount_point:
+      if None == self.__mounted_to:
          return 255
 
       result_code = pfw.shell.run_and_wait_with_status(
               "sudo", "cp"
-            , os.path.join( self.__mount_point, source )
+            , os.path.join( self.__mounted_to, source )
             , destination
          )["code"]
       if 0 != result_code:
@@ -259,20 +302,18 @@ class Partition:
       return True
    # def copy_from
 
-   def mkdir( self, dir: str ):
+   def mkdir( self, directory: str ):
       return pfw.shell.run_and_wait_with_status(
               "sudo", "mkdir", "-p"
-            , os.path.join( self.__mount_point, dir )
+            , os.path.join( self.__mounted_to, directory )
          )["code"]
    # def mkdir
 
 
 
-
-   __file: str = None
-   __size: pfw.size.Size = None
-   __file_system: str = None
-   __mount_point: str = None
+   __description: Description = None
+   __formatted_to: str = None
+   __mounted_to: str = None
 # class Partition
 
 
@@ -299,7 +340,7 @@ class Drive:
             self.__size = kw_end - kw_start + pfw.size.SizeSector
          elif None != kw_size or None != kw_clone_from:
             if None != kw_clone_from:
-               kw_size = pfw.size.Size( os.stat( kw_clone_from ).st_size, pfw.size.Size.eGran.B, align = pfw.size.Size.eGran.M )
+               kw_size = pfw.size.Size( os.stat( kw_clone_from ).st_size, pfw.size.Size.eGran.B, align = ALIGN_SIZE )
             if None != kw_start:
                self.__start = copy.deepcopy( kw_start )
                self.__end = kw_start + kw_size - pfw.size.SizeSector
@@ -432,7 +473,6 @@ class Drive:
    def create( self, **kwargs ):
       kw_size = kwargs.get( "size", pfw.size.SizeZero )
       kw_partitions = kwargs.get( "partitions", [ ] )
-      kw_align = kwargs.get( "align", "parted" )
       kw_force = kwargs.get( "force", False )
 
       partitions_size: pfw.size.Size = self.__reserved_start_size + self.__reserved_end_size
@@ -452,9 +492,9 @@ class Drive:
          else:
             pfw.console.debug.warning( "file exists but will be deleted: ", self.__file )
             self.delete( )
-            self.__size = copy.deepcopy( kw_size ).align( pfw.size.Size.eGran.M )
+            self.__size = copy.deepcopy( kw_size ).align( ALIGN_SIZE )
       else:
-         self.__size = copy.deepcopy( kw_size ).align( pfw.size.Size.eGran.M )
+         self.__size = copy.deepcopy( kw_size ).align( ALIGN_SIZE )
 
       result_code = pfw.shell.run_and_wait_with_status(
               "dd"
@@ -490,21 +530,8 @@ class Drive:
          pfw.console.debug.error( "image '%s' is attached to '%s'" % ( self.__file, self.__attached_to ) )
          return False
 
-      result = pfw.shell.run_and_wait_with_status( "sudo", "losetup", "-f" )
-      if 0 != result["code"]:
-         pfw.console.debug.error( "free loop device was not find" )
-         return False
-      attach_to: str = result["output"]
-
-      result_code = pfw.shell.run_and_wait_with_status(
-            "sudo", "losetup", "-v", "-P", attach_to, self.__file
-         )["code"]
-      if 0 != result_code:
-         pfw.console.debug.error( "image attach error to device(%s): (%d)" % ( attach_to, result_code ) )
-         return False
-
-      self.__attached_to = attach_to
-      return True
+      self.__attached_to = attach( self.__file )
+      return None != self.__attached_to
    # def attach
 
    def detach( self ):
@@ -514,8 +541,7 @@ class Drive:
 
       self.umount( )
 
-      result_code = pfw.shell.run_and_wait_with_status( "sudo", "losetup", "-d", self.__attached_to )["code"]
-      if 0 != result_code:
+      if False == detach( self.__attached_to ):
          return False
 
       self.__attached_to = None
@@ -629,18 +655,7 @@ class Drive:
          pfw.console.debug.error( "image '%s' is not attached" % self.__file )
          return False
 
-      result_code = pfw.shell.run_and_wait_with_status( "sudo", "mkdir", "-p", mount_point )["code"]
-      if 0 != result_code:
-         pfw.console.debug.error( "create directory '%s' error: %d" % ( mount_point, result_code ) )
-         return False
-
-      result_code = pfw.shell.run_and_wait_with_status(
-              "sudo", "mount"
-            , self.__attached_to + "p" + str(partition)
-            , mount_point
-         )["code"]
-      if 0 != result_code:
-         pfw.console.debug.error( "mount partition '%s' to directory '%s' error: %d" % ( self.__attached_to + "p" + str(partition), mount_point, result_code ) )
+      if False == mount( f"{self.__attached_to}p{partition}", mount_point ):
          return False
 
       return True
@@ -659,11 +674,7 @@ class Drive:
 
       result_code: bool = True
       for index in indexes:
-         result_umount = pfw.shell.run_and_wait_with_status(
-                 "sudo", "umount", self.__attached_to + "p" + str(index)
-            )["code"]
-         if 0 != result_umount:
-            pfw.console.debug.error( "umount partition '%s' error: %d" % ( self.__attached_to + "p" + str(index), result_umount ) )
+         if False == umount( f"{self.__attached_to}p{index}" ):
             result_code = False
 
       return result_code
