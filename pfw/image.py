@@ -29,7 +29,7 @@ FILE_SYSTEMS: dict = {
 def create( file: str, size: pfw.size.Size ):
    size_count = size.count( )
    command = f"dd if=/dev/zero of={file} bs={str( int( size_count['gran'] ) )} count={str( size_count['count'] )}"
-   return 0 == pfw.shell.run_and_wait_with_status( command )["code"]
+   return 0 == pfw.shell.execute( command )["code"]
 # def create
 
 def format( file_name: str, file_system: str ):
@@ -56,7 +56,7 @@ def format( file_name: str, file_system: str ):
 
    command = command + f" {file_name}"
 
-   return 0 == pfw.shell.run_and_wait_with_status( command, output = pfw.shell.eOutput.PTY )["code"]
+   return 0 == pfw.shell.execute( command, output = pfw.shell.eOutput.PTY )["code"]
 # def format
 
 def mount( file: str, mount_point: str, fs: str = None ):
@@ -64,7 +64,7 @@ def mount( file: str, mount_point: str, fs: str = None ):
       pfw.console.debug.warning( "Mountpoint is not defined" )
       return False
 
-   result_code = pfw.shell.run_and_wait_with_status( f"sudo -S mkdir -p {mount_point}", output = pfw.shell.eOutput.PTY )["code"]
+   result_code = pfw.shell.execute( f"sudo -S mkdir -p {mount_point}", output = pfw.shell.eOutput.PTY )["code"]
    if 0 != result_code:
       pfw.console.debug.error( "create directory '%s' error: %d" % ( mount_point, result_code ) )
       return False
@@ -75,7 +75,7 @@ def mount( file: str, mount_point: str, fs: str = None ):
    command += f" {file} {mount_point}"
    command += f" -o loop"
 
-   result_code = pfw.shell.run_and_wait_with_status( command, output = pfw.shell.eOutput.PTY )["code"]
+   result_code = pfw.shell.execute( command, output = pfw.shell.eOutput.PTY )["code"]
    if 0 != result_code:
       pfw.console.debug.error( "mount file '%s' to directory '%s' error: '%s'" % ( file, mount_point, result_code ) )
       return False
@@ -90,7 +90,7 @@ def umount( file: str ):
 
    command: str = f"sudo -S umount {file}"
 
-   result_code = pfw.shell.run_and_wait_with_status( command, output = pfw.shell.eOutput.PTY )["code"]
+   result_code = pfw.shell.execute( command, output = pfw.shell.eOutput.PTY )["code"]
    if 0 != result_code:
       pfw.console.debug.error( "umount file '%s' error: '%s'" % ( file, result_code ) )
       return False
@@ -110,7 +110,7 @@ def gen_mount_point( dir_name: str, prefix: str = "mp" ):
 def attach( file: str ):
    command: str = f"sudo -S losetup --find --show --partscan {file}"
 
-   result = pfw.shell.run_and_wait_with_status( command, output = pfw.shell.eOutput.PTY )
+   result = pfw.shell.execute( command, output = pfw.shell.eOutput.PTY )
    if 0 != result["code"]:
       pfw.console.debug.error( "attach file '%s' error: '%s'" % ( file, result["code"] ) )
       return None
@@ -122,7 +122,7 @@ def attach( file: str ):
 def detach( device: str ):
    command: str = f"sudo -S losetup --detach {device}"
 
-   result_code = pfw.shell.run_and_wait_with_status( command, output = pfw.shell.eOutput.PTY )["code"]
+   result_code = pfw.shell.execute( command, output = pfw.shell.eOutput.PTY )["code"]
    if 0 != result_code:
       pfw.console.debug.error( "detach device '%s' error: '%s'" % ( device, result_code ) )
       return False
@@ -133,11 +133,11 @@ def detach( device: str ):
 
 def info( image_file: str ):
    command = f"sudo -S parted {image_file} UNIT b print"
-   result = pfw.shell.run_and_wait_with_status( command, output = pfw.shell.eOutput.PTY )
+   result = pfw.shell.execute( command, output = pfw.shell.eOutput.PTY )
 
    # https://unix.stackexchange.com/a/438308
    command = f"sudo -S parted -m {image_file} print"
-   result = pfw.shell.run_and_wait_with_status( command, output = pfw.shell.eOutput.PTY )
+   result = pfw.shell.execute( command, output = pfw.shell.eOutput.PTY )
 
    if 0 != result["code"]:
       pfw.console.debug.error( f"parted '{image_file}' information error" )
@@ -450,7 +450,7 @@ class Partition:
    # def create
 
    def delete( self ):
-      result_code = pfw.shell.run_and_wait_with_status( "rm", self.__description.file( ) )["code"]
+      result_code = pfw.shell.execute( "rm", self.__description.file( ) )["code"]
       return 0 == result_code
    # def delete
 
@@ -504,7 +504,7 @@ class Partition:
       if False == os.path.exists( source ):
          return False
 
-      result_code = pfw.shell.run_and_wait_with_status(
+      result_code = pfw.shell.execute(
               "sudo", "cp"
             , source
             , os.path.join( self.__description.mount_point( ), destination )
@@ -519,7 +519,7 @@ class Partition:
       if None == self.__description.mount_point( ):
          return 255
 
-      result_code = pfw.shell.run_and_wait_with_status(
+      result_code = pfw.shell.execute(
               "sudo", "cp"
             , os.path.join( self.__description.mount_point( ), source )
             , destination
@@ -531,7 +531,7 @@ class Partition:
    # def copy_from
 
    def mkdir( self, directory: str ):
-      return pfw.shell.run_and_wait_with_status(
+      return pfw.shell.execute(
               "sudo", "mkdir", "-p"
             , os.path.join( self.__description.mount_point( ), directory )
          )["code"]
@@ -624,7 +624,7 @@ class Drive:
          if False == self.detach( ):
             return False
 
-      result_code = pfw.shell.run_and_wait_with_status( "rm", self.__file )["code"]
+      result_code = pfw.shell.execute( "rm", self.__file )["code"]
       if 0 != result_code:
          pfw.console.debug.error( "image can't be deleted(%s): (%d)" % ( self.__file, result_code ) )
          return False
@@ -677,7 +677,7 @@ class Drive:
       # Creating partitions
       if "sfdisk" == kw_util:
          # Building script file for 'sfdisk' command
-         pfw.shell.run_and_wait_with_status( "mkdir", "-p" , "/tmp/loop" )["code"]
+         pfw.shell.execute( "mkdir", "-p" , "/tmp/loop" )["code"]
          dump_file = open( "/tmp/loop/dump", "w+" )
          dump_file.write( "label: dos\n" )
          dump_file.write( "label-id: 0xca40f2e0\n" )
@@ -705,7 +705,7 @@ class Drive:
          pfw.console.debug.header( commands )
          os.system( commands )
       elif "parted" == kw_util:
-         pfw.shell.run_and_wait_with_status( f"sudo parted {self.__attached_to} -s mklabel gpt" )
+         pfw.shell.execute( f"sudo parted {self.__attached_to} -s mklabel gpt" )
 
          ( start, end ) = ( pfw.size.SizeZero, self.__reserved_start_size - pfw.size.SizeSector )
          for index in range( len( partitions ) ):
@@ -715,11 +715,11 @@ class Drive:
             end = end + partition.size( )
 
             # Create partition
-            pfw.shell.run_and_wait_with_status(
+            pfw.shell.execute(
                   f"sudo parted {self.__attached_to} -s mkpart {partition.label( )} {partition.fs( )} {start.sectors( result = 'quotient' )}s {end.sectors( result = 'quotient' )}s"
                )
 
-            pfw.shell.run_and_wait_with_status( f"sudo parted {self.__attached_to} print {index + 1}" )
+            pfw.shell.execute( f"sudo parted {self.__attached_to} print {index + 1}" )
 
             # Add partition to the list
             self.__partitions.append(
@@ -733,10 +733,10 @@ class Drive:
                )
 
          if None != self.__bootable_index:
-            pfw.shell.run_and_wait_with_status( f"sudo parted {self.__attached_to} set {self.__bootable_index} boot on" )
+            pfw.shell.execute( f"sudo parted {self.__attached_to} set {self.__bootable_index} boot on" )
 
-         pfw.shell.run_and_wait_with_status( f"sudo parted {self.__attached_to} -s print unit s print" )
-         pfw.shell.run_and_wait_with_status( f"sudo partprobe {self.__attached_to}" )
+         pfw.shell.execute( f"sudo parted {self.__attached_to} -s print unit s print" )
+         pfw.shell.execute( f"sudo partprobe {self.__attached_to}" )
       else:
          raise AttributeError
 
@@ -754,7 +754,7 @@ class Drive:
       for index in range( len( self.__partitions ) ):
          partition = self.__partitions[index]
          if None != partition.clone_from( ):
-            pfw.shell.run_and_wait_with_status(
+            pfw.shell.execute(
                   f"sudo dd if={partition.clone_from( )} of={self.__attached_to}p{index + 1} bs=1M status=none", test = False
                )
          else:
