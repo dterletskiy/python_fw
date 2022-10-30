@@ -92,7 +92,7 @@ types_map: dict = {
    }
 
 def type_builder( _type: str ):
-   type_list = pfw.base.multiple_split( str(_type), "<>, " )
+   type_list = pfw.base.multiple_split( str(_type), [ "<", ">", ",", " " ] )
 
    new_type: str = ""
    for type_item in type_list:

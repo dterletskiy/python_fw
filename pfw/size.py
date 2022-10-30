@@ -13,10 +13,12 @@ class Size:
       S = 512
    # class eGran
 
-   def __init__( self, value: int, gran: eGran = eGran.B, **kwargs ):
+   # value could have 'int' of 'float' types
+   # In last case this means that size has non-integer value of KB, MB, GB and will be converted to integer value of B
+   def __init__( self, value, gran: eGran = eGran.B, **kwargs ):
       kw_align = kwargs.get( "align", None )
 
-      self.__bytes = value * gran
+      self.__bytes = int(value * gran)
 
       if None != kw_align:
          self.align( kw_align )
@@ -94,9 +96,10 @@ class Size:
    def info( self, tabulations: int = 0 ):
       pfw.console.debug.info( self.__class__.__name__, ":", tabs = ( tabulations + 0 ) )
       pfw.console.debug.info( "bytes:     \'", self.__bytes, "\'", tabs = ( tabulations + 1 ) )
-      pfw.console.debug.info( "sectors:   \'", self.sectors( ), "\'", tabs = ( tabulations + 1 ) )
-      pfw.console.debug.info( "kilobytes: \'", self.kilobytes( ), "\'", tabs = ( tabulations + 1 ) )
-      pfw.console.debug.info( "megabytes: \'", self.megabytes( ), "\'", tabs = ( tabulations + 1 ) )
+      pfw.console.debug.info( "sectors:   \'", self.sectors( )["quotient"], "\'", tabs = ( tabulations + 1 ) )
+      pfw.console.debug.info( "kilobytes: \'", self.kilobytes( )["quotient"], "\'", tabs = ( tabulations + 1 ) )
+      pfw.console.debug.info( "megabytes: \'", self.megabytes( )["quotient"], "\'", tabs = ( tabulations + 1 ) )
+      pfw.console.debug.info( "gigabytes: \'", self.gigabytes( )["quotient"], "\'", tabs = ( tabulations + 1 ) )
    # def info
 
    def align( self, gran: eGran = eGran.S ): 
@@ -106,25 +109,58 @@ class Size:
       return self
    # def align
 
-   def bytes( self ):
-      return self.__bytes
+   def size( self, gran: eGran = eGran.B, **kwargs ):
+      kw_result = kwargs.get( "result", None )
+
+      quotient = self.__bytes // gran
+      remainder = self.__bytes % gran
+
+      if "quotient" == kw_result:
+         return quotient
+      elif "remainder" == kw_result:
+         return remainder
+
+      return { "quotient": quotient, "remainder": remainder }
    # def bytes
 
-   def kilobytes( self ):
-      return self.__bytes // Size.eGran.K
+   def bytes( self, **kwargs ):
+      return self.size( Size.eGran.B, **kwargs )
+   # def bytes
+
+   def sectors( self, **kwargs ):
+      return self.size( Size.eGran.S, **kwargs )
+   # def sectors
+
+   def kilobytes( self, **kwargs ):
+      return self.size( Size.eGran.K, **kwargs )
    # def kilobytes
 
-   def megabytes( self ):
-      return self.__bytes // Size.eGran.M
+   def megabytes( self, **kwargs ):
+      return self.size( Size.eGran.M, **kwargs )
    # def megabytes
 
-   def gigabytes( self ):
-      return self.__bytes // Size.eGran.G
+   def gigabytes( self, **kwargs ):
+      return self.size( Size.eGran.G, **kwargs )
    # def gigabytes
 
-   def sectors( self ):
-      return self.__bytes // Size.eGran.S
-   # def sectors
+   def count( self, **kwargs ):
+      gran = Size.eGran.G
+      size_map = self.size( gran )
+      if 0 != size_map["remainder"]:
+         gran = Size.eGran.M
+         size_map = self.size( gran )
+      if 0 != size_map["remainder"]:
+         gran = Size.eGran.K
+         size_map = self.size( gran )
+      if 0 != size_map["remainder"]:
+         gran = Size.eGran.S
+         size_map = self.size( gran )
+      if 0 != size_map["remainder"]:
+         gran = Size.eGran.B
+         size_map = self.size( gran )
+
+      return { "count": size_map["quotient"], "gran": gran }
+   # def count
 
    __bytes: int = None
 # class Size

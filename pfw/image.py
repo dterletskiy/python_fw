@@ -1,6 +1,9 @@
 import os
 import copy
+import re
+import random
 
+import pfw.base
 import pfw.console
 import pfw.shell
 import pfw.size
@@ -22,6 +25,12 @@ FILE_SYSTEMS: dict = {
    },
 }
 ( "ext2", "ext3", "ext4", "fat12", "fat16", "fat32" )
+
+def create( file: str, size: pfw.size.Size ):
+   size_count = size.count( )
+   command = f"dd if=/dev/zero of={file} bs={str( int( size_count['gran'] ) )} count={str( size_count['count'] )}"
+   return 0 == pfw.shell.run_and_wait_with_status( command )["code"]
+# def create
 
 def format( file_name: str, file_system: str ):
    if None == file_system:
@@ -51,6 +60,10 @@ def format( file_name: str, file_system: str ):
 # def format
 
 def mount( file: str, mount_point: str, fs: str = None ):
+   if None == mount_point:
+      pfw.console.debug.warning( "Mountpoint is not defined" )
+      return False
+
    result_code = pfw.shell.run_and_wait_with_status( f"sudo -S mkdir -p {mount_point}", output = pfw.shell.eOutput.PTY )["code"]
    if 0 != result_code:
       pfw.console.debug.error( "create directory '%s' error: %d" % ( mount_point, result_code ) )
@@ -71,6 +84,10 @@ def mount( file: str, mount_point: str, fs: str = None ):
 # def mount
 
 def umount( file: str ):
+   if None == file:
+      pfw.console.debug.warning( "Mountpoint (or image file) is not defined" )
+      return False
+
    command: str = f"sudo -S umount {file}"
 
    result_code = pfw.shell.run_and_wait_with_status( command, output = pfw.shell.eOutput.PTY )["code"]
@@ -81,8 +98,17 @@ def umount( file: str ):
    return True
 # def umount
 
+def gen_mount_point( dir_name: str, prefix: str = "mp" ):
+   mount_point = None
+   while None == mount_point or True == os.path.exists( mount_point ):
+      number: int = random.randint( 0, 99999 )
+      mount_point = os.path.join( dir_name, prefix + f"{prefix}{number:05d}" )
+
+   return mount_point
+# def gen_mount_point
+
 def attach( file: str ):
-   command: str = f"sudo -S losetup --find --show {file}"
+   command: str = f"sudo -S losetup --find --show --partscan {file}"
 
    result = pfw.shell.run_and_wait_with_status( command, output = pfw.shell.eOutput.PTY )
    if 0 != result["code"]:
@@ -105,79 +131,259 @@ def detach( device: str ):
    return True
 # def detach
 
+def info( image_file: str ):
+   command = f"sudo -S parted {image_file} UNIT b print"
+   result = pfw.shell.run_and_wait_with_status( command, output = pfw.shell.eOutput.PTY )
+
+   # https://unix.stackexchange.com/a/438308
+   command = f"sudo -S parted -m {image_file} print"
+   result = pfw.shell.run_and_wait_with_status( command, output = pfw.shell.eOutput.PTY )
+
+   if 0 != result["code"]:
+      pfw.console.debug.error( f"parted '{image_file}' information error" )
+      return None
+
+   pattern: dict = {
+      "error": r"^Error:\s+(.*)$",
+      "size": r"^(\d+)\.?(\d*)(.+)$"
+   }
+
+   parted_output = result["output"].split( "\r\n" )
+
+   # Check about error result command execution
+   match = re.match( pattern["error"], parted_output[0] )
+   if match:
+      pfw.console.debug.error( f"image file '{image_file}' information error: {match.group( 1 )}" )
+      return None
+
+   def text_to_size( text: str ):
+      text_to_gran = {
+         "B": pfw.size.Size.eGran.B,
+         "kB": pfw.size.Size.eGran.K,
+         "MB": pfw.size.Size.eGran.M,
+         "GB": pfw.size.Size.eGran.G,
+      }
+
+      match = re.match( pattern["size"], text )
+      if match:
+         return pfw.size.Size( float( f"{match.group(1)}.{match.group(2)}" ), text_to_gran[ match.group(3) ] )
+
+      return None
+   # def text_to_size
+
+   parted_partitions = parted_output
+   parted_partitions = parted_partitions[2:]
+   partitions: list = [ ]
+   for parted_partition in parted_partitions:
+      parted_partition_items = parted_partition.split(":")
+      partitions.append(
+         Partition.Description(
+            start = text_to_size( parted_partition_items[1] ),
+            end = text_to_size( parted_partition_items[2] ),
+            size = text_to_size( parted_partition_items[3] ),
+            fs = parted_partition_items[4],
+            label = parted_partition_items[5]
+         )
+      )
+
+   # Parse image info about type and common size
+   parted_image = parted_output[1].split(":")
+   if( "loop" == parted_image[5] ):
+      if( 1 != len( partitions ) ):
+         pfw.console.debug.error( f"Image type defined as 'partition' but it contains {len( partitions )} inside" )
+         return None
+      # return Partition( ) # @TDA: should be implemented
+      return None
+   elif( "msdos" == parted_image[5] or "gpt" == parted_image[5] ):
+      # return Drive( ) # @TDA: should be implemented
+      return None
+   else:
+      pfw.console.debug.error( f"Undefined image type {image_file}" )
+      return None
+
+   pfw.console.debug.ok( "-------------------------------------------------------------------" )
+   for partition in partitions:
+      partition.info( )
+   pfw.console.debug.ok( "-------------------------------------------------------------------" )
+
+
+# def info
+
 
 
 ALIGN_SIZE: pfw.size.Size.eGran = pfw.size.Size.eGran.M
-
-class Description:
-   def __init__( self, file: str, mount_point: str, size: str, fs: str ):
-      self.__file = copy.deepcopy( file )
-      self.__mount_point = copy.deepcopy( mount_point )
-      self.__size = copy.deepcopy( size ).align( ALIGN_SIZE )
-      self.__fs = copy.deepcopy( fs )
-   # def __init__
-
-   def __del__( self ):
-      pass
-   # def __del__
-
-   def __setattr__( self, attr, value ):
-      attr_list = [ i for i in Description.__dict__.keys( ) ]
-      if attr in attr_list:
-         self.__dict__[ attr ] = value
-         return
-      raise AttributeError
-   # def __setattr__
-
-   def __str__( self ):
-      attr_list = [ i for i in Description.__dict__.keys( ) if i[:2] != pfw.base.class_ignore_field ]
-      vector = [ ]
-      for attr in attr_list:
-         vector.append( str( attr ) + " = " + str( self.__dict__.get( attr ) ) )
-      name = "Description { " + ", ".join( vector ) + " }"
-      return name
-   # def __str__
-
-   def info( self, tabulations: int = 0 ):
-      pfw.console.debug.info( self.__class__.__name__, ":", tabs = ( tabulations + 0 ) )
-      pfw.console.debug.info( "file:         \'", self.__file, "\'", tabs = ( tabulations + 1 ) )
-      pfw.console.debug.info( "size:         \'", self.__size, "\'", tabs = ( tabulations + 1 ) )
-      pfw.console.debug.info( "mount point:  \'", self.__mount_point, "\'", tabs = ( tabulations + 1 ) )
-      pfw.console.debug.info( "fs:           \'", self.__fs, "\'", tabs = ( tabulations + 1 ) )
-   # def info
-
-   def resize( self, size ):
-      self.__size = size
-
-   def file( self ):
-      return self.__file
-   # def arch
-
-   def mount_point( self ):
-      return self.__mount_point
-   # def arch
-
-   def size( self ):
-      return self.__size
-   # def arch
-
-   def fs( self ):
-      return self.__fs
-   # def arch
-
-   __file: str = None
-   __mount_point: str = None
-   __size: str = None
-   __fs: str = None
-# class Description
-
 
 class Partition:
    class FormatError( TypeError ): pass
    class MountError( TypeError ): pass
 
-   def __init__( self, description: Description ):
-      self.__description = copy.deepcopy( description )
+   class Description:
+      def __init__( self, **kwargs ):
+         kw_start = kwargs.get( "start", None )
+         kw_end = kwargs.get( "end", None )
+         kw_size = kwargs.get( "size", None )
+         kw_label = kwargs.get( "label", "NoLabel" )
+         kw_fs = kwargs.get( "fs", "ext4" )
+         kw_type = kwargs.get( "type", 83 )
+         kw_clone_from = kwargs.get( "clone_from", None )
+         kw_file = kwargs.get( "file", None )
+
+         kw_clone_from_size = None
+         if None != kw_clone_from:
+            if False == os.path.exists( kw_clone_from ):
+               pfw.console.debug.warning( f"'clone_from' file does not exist: '{kw_clone_from}'" )
+            else:
+               kw_clone_from_size = pfw.size.Size( os.stat( kw_clone_from ).st_size, pfw.size.Size.eGran.B, align = ALIGN_SIZE )
+
+         if None != kw_start and None != kw_end:
+            self.__start = copy.deepcopy( kw_start )
+            self.__end = copy.deepcopy( kw_end )
+            self.__size = kw_end - kw_start + pfw.size.SizeSector
+            if None != kw_clone_from_size and self.__size < kw_clone_from_size:
+               pfw.console.debug.error( "'size' < 'clone_from' size" )
+         elif None != kw_size or None != kw_clone_from_size:
+            if None != kw_clone_from_size:
+               kw_size = kw_clone_from_size
+            if None != kw_start:
+               self.__start = copy.deepcopy( kw_start )
+               self.__end = kw_start + kw_size - pfw.size.SizeSector
+               self.__size = copy.deepcopy( kw_size )
+            elif None != kw_end:
+               self.__start = kw_end - kw_size + pfw.size.SizeSector
+               self.__end = copy.deepcopy( kw_end )
+               self.__size = copy.deepcopy( kw_size )
+            else:
+               self.__start = pfw.size.SizeZero
+               self.__end = copy.deepcopy( kw_size ) - pfw.size.SizeSector
+               self.__size = copy.deepcopy( kw_size )
+         else:
+            pfw.console.debug.error( "Any valid combination of 'start', 'end', 'size', 'clone_from' have not been defined" )
+            raise AttributeError
+
+         self.__label = copy.deepcopy( kw_label )
+         self.__fs = copy.deepcopy( kw_fs )
+         self.__type = copy.deepcopy( kw_type )
+         self.__clone_from = copy.deepcopy( kw_clone_from )
+         self.__file = copy.deepcopy( kw_file )
+      # def __init__
+
+      def __del__( self ):
+         pass
+      # def __del__
+
+      def __str__( self ):
+         attr_list = [ i for i in Partition.Description.__dict__.keys( ) if i[:2] != pfw.base.class_ignore_field ]
+         vector = [ ]
+         for attr in attr_list:
+            vector.append( str( attr ) + " = " + str( self.__dict__.get( attr ) ) )
+         name = "Partition.Description { " + ", ".join( vector ) + " }"
+         return name
+      # def __str__
+
+      def __setattr__( self, attr, value ):
+         attr_list = [ i for i in Partition.Description.__dict__.keys( ) ]
+         if attr in attr_list:
+            self.__dict__[ attr ] = value
+            return
+         raise AttributeError
+      # def __setattr__
+
+      def info( self, tabulations: int = 0 ):
+         pfw.console.debug.info( self.__class__.__name__, ":", tabs = ( tabulations + 0 ) )
+         self.__start.info( tabulations + 1 )
+         self.__end.info( tabulations + 1 )
+         self.__size.info( tabulations + 1 )
+         pfw.console.debug.info( "label:        \'", self.__label, "\'", tabs = ( tabulations + 1 ) )
+         pfw.console.debug.info( "type:         \'", self.__type, "\'", tabs = ( tabulations + 1 ) )
+         pfw.console.debug.info( "fs:           \'", self.__fs, "\'", tabs = ( tabulations + 1 ) )
+         pfw.console.debug.info( "clone_from:   \'", self.__clone_from, "\'", tabs = ( tabulations + 1 ) )
+         pfw.console.debug.info( "file:         \'", self.__file, "\'", tabs = ( tabulations + 1 ) )
+         pfw.console.debug.info( "mount_point:  \'", self.__mount_point, "\'", tabs = ( tabulations + 1 ) )
+      # def info
+
+      def start( self ):
+         return self.__start
+      # def start
+
+      def end( self ):
+         return self.__end
+      # def start
+
+      def size( self ):
+         return self.__size
+      # def start
+
+      def set_size( self, size: pfw.size.Size = None ):
+         self.__size = size
+         self.__end = self.__start + self.__size - pfw.size.SizeSector
+      # def set_start
+
+      def label( self ):
+         return self.__label
+      # def label
+
+      def set_label( self, label: str = None ):
+         self.__label = label
+      # def set_label
+
+      def type( self ):
+         return self.__type
+      # def type
+
+      def fs( self ):
+         return self.__fs
+      # def fs
+
+      def set_fs( self, fs: str = None ):
+         self.__fs = fs
+      # def set_fs
+
+      def clone_from( self ):
+         return self.__clone_from
+      # def clone_from
+
+      def file( self ):
+         return self.__file
+      # def file
+
+      def set_file( self, file: str = None ):
+         self.__file = file
+      # def set_file
+
+      def mount_point( self ):
+         return self.__mount_point
+      # def mount_point
+
+      def set_mount_point( self, mount_point: str = None ):
+         self.__mount_point = mount_point
+      # def set_mount_point
+
+
+
+      __size = None # size = end - start + 1 sector
+      __start = None # pointing to first partition sector
+      __end = None # pointing to last partition sector
+      __label = None
+      __fs = None
+      __type = None
+      __clone_from = None
+      __file = None
+      __mount_point = None
+   # class Description
+
+   def __init__( self, description: Description, **kwargs ):
+      kw_build = kwargs.get( "build", False )
+
+      self.__description = Partition.Description(
+            size = description.size( ),
+            start = description.start( ),
+            end = description.end( ),
+            clone_from = description.clone_from( ),
+            file = description.file( ),
+         )
+
+      if True == kw_build:
+         self.build( description, **kwargs )
    # def __init__
 
    def __del__( self ):
@@ -204,31 +410,43 @@ class Partition:
    def info( self, tabulations: int = 0 ):
       pfw.console.debug.info( self.__class__.__name__, ":", tabs = ( tabulations + 0 ) )
       self.__description.info( tabulations + 1 )
-      pfw.console.debug.info( "formatted to:    \'", self.__formatted_to, "\'", tabs = ( tabulations + 1 ) )
-      pfw.console.debug.info( "mounted to:      \'", self.__mounted_to, "\'", tabs = ( tabulations + 1 ) )
    # def info
 
-   def create( self, force: bool = False ):
-      if None != self.__mounted_to:
+   def build( self, description: Description, **kwargs ):
+      result: bool = False
+      if True == self.create( **kwargs ):
+         result = self.format( description.fs( ) )
+
+      return result
+   # def build
+
+   def create( self, **kwargs ):
+      kw_force = kwargs.get( "force", False )
+      kw_file = kwargs.get( "file", self.__description.file( ) )
+      kw_size = kwargs.get( "size", self.__description.size( ) )
+
+      if None != self.__description.mount_point( ):
          pfw.console.debug.error( "image mounted" )
          return False
 
-      if True == os.path.exists( self.__description.file( ) ):
-         if False == force:
-            pfw.console.debug.error( "file '%s' exists" % self.__description.file( ) )
+      if True == os.path.exists( kw_file ):
+         if False == kw_force:
+            pfw.console.debug.error( "file '%s' exists" % kw_file )
             return False
          else:
-            pfw.console.debug.warning( "file '%s' exists, but will be deleted" % self.__description.file( ) )
+            pfw.console.debug.warning( "file '%s' exists, but will be deleted" % kw_file )
             self.delete( )
 
-      result_code = pfw.shell.run_and_wait_with_status(
-              "dd"
-            , "if=/dev/zero"
-            , "of=" + self.__description.file( )
-            , "bs=" + str( int( pfw.size.Size.eGran.M ) )
-            , "count=" + str( self.__description.size( ).megabytes( ) )
-         )["code"]
-      return 0 == result_code
+
+      self.__description.set_file( kw_file )
+      self.__description.set_size( kw_size )
+      self.__description.set_fs( )
+
+      if False == create( kw_file, kw_size ):
+         pfw.console.debug.error( "image can't be created: (%s)" % ( kw_file ) )
+         return False
+
+      return True
    # def create
 
    def delete( self ):
@@ -236,41 +454,51 @@ class Partition:
       return 0 == result_code
    # def delete
 
-   def mount( self, **kwargs ):
-      kw_mount_point = kwargs.get( "mount_point", self.__description.mount_point( ) )
+   def mount( self, mount_point: str, gen_subdir: bool = False ):
+      if None == mount_point:
+            pfw.console.debug.error( "Mount point is not defined: '%s'" % self.__description.file( ) )
+            return None
 
-      if None == self.__formatted_to:
-         raise self.MountError( "Partition is not formated: '%s'" % self.__description.file( ) )
+      if True == gen_subdir:
+         mount_point = gen_mount_point( mount_point )
 
-      if False == mount( self.__description.file( ), kw_mount_point, self.__formatted_to ):
-         return False
+      if None == self.__description.fs( ):
+         pfw.console.debug.error( "Partition is not formated: '%s'" % self.__description.file( ) )
+         return None
 
-      self.__mounted_to = kw_mount_point
-      return True
+      if False == mount( self.__description.file( ), mount_point, self.__description.fs( ) ):
+         return None
+
+      self.__description.set_mount_point( mount_point )
+      return mount_point
    # def mount
 
    def umount( self ):
-      if None == self.__mounted_to:
-         raise self.MountError( "Partition is not mounted: '%s'" % self.__description.file( ) )
+      if None == self.__description.mount_point( ):
+         pfw.console.debug.error( "Partition is not mounted: '%s'" % self.__description.file( ) )
+         return False
 
       if False == umount( self.__description.file( ) ):
          return False
 
-      self.__mounted_to = None
+      self.__description.set_mount_point( )
       return True
    # def umount
 
-   def format( self, **kwargs ):
-      kw_file_system = kwargs.get( "file_system", self.__description.fs( ) )
+   def format( self, fs: str ):
+      if None == fs:
+         pfw.console.debug.error( "Filesystem is None" )
+         return False
 
-      result = format ( self.__description.file( ), kw_file_system )
-      if True == result:
-         self.__formatted_to = kw_file_system
-      return result
+      if False == format( self.__description.file( ), fs ):
+         return False
+
+      self.__description.set_fs( fs )
+      return True
    # def format
 
    def copy_to( self, source: str, destination: str = "" ):
-      if None == self.__mounted_to:
+      if None == self.__description.mount_point( ):
          return False
 
       if False == os.path.exists( source ):
@@ -279,7 +507,7 @@ class Partition:
       result_code = pfw.shell.run_and_wait_with_status(
               "sudo", "cp"
             , source
-            , os.path.join( self.__mounted_to, destination )
+            , os.path.join( self.__description.mount_point( ), destination )
          )["code"]
       if 0 != result_code:
          return False
@@ -288,12 +516,12 @@ class Partition:
    # def copy_to
 
    def copy_from( self, source: str, destination: str ):
-      if None == self.__mounted_to:
+      if None == self.__description.mount_point( ):
          return 255
 
       result_code = pfw.shell.run_and_wait_with_status(
               "sudo", "cp"
-            , os.path.join( self.__mounted_to, source )
+            , os.path.join( self.__description.mount_point( ), source )
             , destination
          )["code"]
       if 0 != result_code:
@@ -305,15 +533,13 @@ class Partition:
    def mkdir( self, directory: str ):
       return pfw.shell.run_and_wait_with_status(
               "sudo", "mkdir", "-p"
-            , os.path.join( self.__mounted_to, directory )
+            , os.path.join( self.__description.mount_point( ), directory )
          )["code"]
    # def mkdir
 
 
 
    __description: Description = None
-   __formatted_to: str = None
-   __mounted_to: str = None
 # class Partition
 
 
@@ -323,116 +549,6 @@ class Partition:
 class Drive:
    class FormatError( TypeError ): pass
    class MountError( TypeError ): pass
-
-   class Partition:
-      def __init__( self, **kwargs ):
-         kw_start = kwargs.get( "start", None )
-         kw_end = kwargs.get( "end", None )
-         kw_size = kwargs.get( "size", None )
-         kw_label = kwargs.get( "label", "NoLabel" )
-         kw_fs = kwargs.get( "fs", "ext4" )
-         kw_type = kwargs.get( "type", 83 )
-         kw_clone_from = kwargs.get( "clone_from", None )
-
-         if None != kw_start and None != kw_end:
-            self.__start = copy.deepcopy( kw_start )
-            self.__end = copy.deepcopy( kw_end )
-            self.__size = kw_end - kw_start + pfw.size.SizeSector
-         elif None != kw_size or None != kw_clone_from:
-            if None != kw_clone_from:
-               kw_size = pfw.size.Size( os.stat( kw_clone_from ).st_size, pfw.size.Size.eGran.B, align = ALIGN_SIZE )
-            if None != kw_start:
-               self.__start = copy.deepcopy( kw_start )
-               self.__end = kw_start + kw_size - pfw.size.SizeSector
-               self.__size = copy.deepcopy( kw_size )
-            elif None != kw_end:
-               self.__start = kw_end - kw_size + pfw.size.SizeSector
-               self.__end = copy.deepcopy( kw_end )
-               self.__size = copy.deepcopy( kw_size )
-            else:
-               self.__start = pfw.size.SizeZero
-               self.__end = copy.deepcopy( kw_size ) - pfw.size.SizeSector
-               self.__size = copy.deepcopy( kw_size )
-         else:
-            pfw.console.debug.error( "Any valid combination of 'start', 'end', 'size', 'clone_from' have not been defined" )
-            raise AttributeError
-
-         self.__label = kw_label
-         self.__fs = kw_fs
-         self.__type = kw_type
-         self.__clone_from = kw_clone_from
-      # def __init__
-
-      def __del__( self ):
-         pass
-      # def __del__
-
-      def __str__( self ):
-         attr_list = [ i for i in Drive.Partition.__dict__.keys( ) if i[:2] != pfw.base.class_ignore_field ]
-         vector = [ ]
-         for attr in attr_list:
-            vector.append( str( attr ) + " = " + str( self.__dict__.get( attr ) ) )
-         name = "Drive.Partition { " + ", ".join( vector ) + " }"
-         return name
-      # def __str__
-
-      def __setattr__( self, attr, value ):
-         attr_list = [ i for i in Drive.Partition.__dict__.keys( ) ]
-         if attr in attr_list:
-            self.__dict__[ attr ] = value
-            return
-         raise AttributeError
-      # def __setattr__
-
-      def info( self, tabulations: int = 0 ):
-         pfw.console.debug.info( self.__class__.__name__, ":", tabs = ( tabulations + 0 ) )
-         self.__start.info( tabulations + 1 )
-         self.__end.info( tabulations + 1 )
-         self.__size.info( tabulations + 1 )
-         pfw.console.debug.info( "label:        \'", self.__label, "\'", tabs = ( tabulations + 1 ) )
-         pfw.console.debug.info( "type:         \'", self.__type, "\'", tabs = ( tabulations + 1 ) )
-         pfw.console.debug.info( "fs:           \'", self.__fs, "\'", tabs = ( tabulations + 1 ) )
-         pfw.console.debug.info( "clone_from:   \'", self.__clone_from, "\'", tabs = ( tabulations + 1 ) )
-      # def info
-
-      def start( self ):
-         return self.__start
-      # def start
-
-      def end( self ):
-         return self.__end
-      # def start
-
-      def size( self ):
-         return self.__size
-      # def start
-
-      def label( self ):
-         return self.__label
-      # def label
-
-      def type( self ):
-         return self.__type
-      # def type
-
-      def fs( self ):
-         return self.__fs
-      # def fs
-
-      def clone_from( self ):
-         return self.__clone_from
-      # def clone_from
-
-
-
-      __size = None; # size = end - start + 1 sector
-      __start = None; # pointing to first partition sector
-      __end = None; # pointing to last partition sector
-      __label = None;
-      __fs = None;
-      __type = None;
-      __clone_from = None;
-   # class Partition
 
    def __init__( self, file: str ):
       self.__file = file
@@ -474,6 +590,7 @@ class Drive:
       kw_size = kwargs.get( "size", pfw.size.SizeZero )
       kw_partitions = kwargs.get( "partitions", [ ] )
       kw_force = kwargs.get( "force", False )
+      kw_file = kwargs.get( "file", self.__file )
 
       partitions_size: pfw.size.Size = self.__reserved_start_size + self.__reserved_end_size
       for partition in kw_partitions:
@@ -484,28 +601,19 @@ class Drive:
          pfw.console.debug.error( "image attached" )
          return False
 
-      if True == os.path.exists( self.__file ):
+      if True == os.path.exists( kw_file ):
          if False == kw_force:
-            pfw.console.debug.warning( "file exists: ", self.__file )
-            self.__size = pfw.size.Size( os.stat( self.__file ).st_size )
+            pfw.console.debug.error( "file '%s' exists" % kw_file )
             return False
          else:
-            pfw.console.debug.warning( "file exists but will be deleted: ", self.__file )
+            pfw.console.debug.warning( "file '%s' exists, but will be deleted" % kw_file )
             self.delete( )
-            self.__size = copy.deepcopy( kw_size ).align( ALIGN_SIZE )
-      else:
-         self.__size = copy.deepcopy( kw_size ).align( ALIGN_SIZE )
 
-      result_code = pfw.shell.run_and_wait_with_status(
-              "dd"
-            , "if=/dev/zero"
-            , "of=" + self.__file
-            , "bs=" + str( int( pfw.size.Size.eGran.M ) )
-            , "count=" + str( self.__size.megabytes( ) )
-         )["code"]
-      if 0 != result_code:
-         pfw.console.debug.error( "image can't be created(%s): (%d)" % ( self.__file, result_code ) )
-         self.__size = None
+      self.__file = kw_file
+      self.__size = copy.deepcopy( kw_size ).align( ALIGN_SIZE )
+
+      if False == create( kw_file, kw_size ):
+         pfw.console.debug.error( "image can't be created: (%s)" % ( kw_file ) )
          return False
 
       return True
@@ -578,7 +686,7 @@ class Drive:
          dump_file.write( "\n" )
          next_start: int = 2048
          for index in range( len( partitions ) ):
-            self.__partitions.append( Drive.Partition( next_start, partitions[index].size( ), 83 ) )
+            self.__partitions.append( Partition.Description( next_start, partitions[index].size( ), 83 ) )
 
             dump_file.write(
                   self.__attached_to + "p" + str(index + 1) + 
@@ -606,14 +714,16 @@ class Drive:
             start = end + pfw.size.SizeSector
             end = end + partition.size( )
 
+            # Create partition
             pfw.shell.run_and_wait_with_status(
-                  f"sudo parted {self.__attached_to} -s mkpart {partition.label( )} {partition.fs( )} {start.sectors( )}s {end.sectors( )}s"
+                  f"sudo parted {self.__attached_to} -s mkpart {partition.label( )} {partition.fs( )} {start.sectors( result = 'quotient' )}s {end.sectors( result = 'quotient' )}s"
                )
 
             pfw.shell.run_and_wait_with_status( f"sudo parted {self.__attached_to} print {index + 1}" )
 
+            # Add partition to the list
             self.__partitions.append(
-                  Drive.Partition(
+                  Partition.Description(
                         start = start,
                         end = end,
                         fs = partition.fs( ),
@@ -631,8 +741,18 @@ class Drive:
          raise AttributeError
 
       # Format or clone all partitions
-      for index in range( len( partitions ) ):
-         partition = partitions[index]
+      self.init_partitions( )
+
+      return True
+   # def init
+
+   def init_partitions( self ):
+      if None == self.__attached_to:
+         pfw.console.debug.error( "image must be attached" )
+         return False
+
+      for index in range( len( self.__partitions ) ):
+         partition = self.__partitions[index]
          if None != partition.clone_from( ):
             pfw.shell.run_and_wait_with_status(
                   f"sudo dd if={partition.clone_from( )} of={self.__attached_to}p{index + 1} bs=1M status=none", test = False
@@ -641,24 +761,33 @@ class Drive:
             self.format( index + 1, partition.fs( ) )
 
       return True
-   # def init
+   # def init_partitions
 
-   def format( self, partition: int, file_system: str ):
-      return format( self.__attached_to + "p" + str(partition), file_system )
+   def format( self, partition: int, fs: str ):
+      return format( self.__attached_to + "p" + str(partition), fs )
    # def format
 
-   def mount( self, partition: int, mount_point: str ):
+   def mount( self, partition: int, mount_point: str, gen_subdir: bool = False ):
       # Could be done without attach:
       # https://superuser.com/questions/694430/how-to-inspect-disk-image
 
       if None == self.__attached_to:
          pfw.console.debug.error( "image '%s' is not attached" % self.__file )
-         return False
+         return None
+
+      if None == mount_point:
+            pfw.console.debug.error( "Mount point is not defined" )
+            return None
+
+      if True == gen_subdir:
+         mount_point = gen_mount_point( mount_point )
 
       if False == mount( f"{self.__attached_to}p{partition}", mount_point ):
-         return False
+         return None
 
-      return True
+      self.__partitions[ partition - 1 ].set_mount_point( mount_point )
+
+      return mount_point
    # def mount
 
    def umount( self, partition: int = None ):
@@ -674,7 +803,12 @@ class Drive:
 
       result_code: bool = True
       for index in indexes:
-         if False == umount( f"{self.__attached_to}p{index}" ):
+         if None == self.__partitions[ index - 1 ].mount_point( ):
+            continue
+
+         if False == umount( self.__partitions[ index - 1 ].mount_point( ) ):
+            self.__partitions[ index - 1 ].set_mount_point( )
+         else:
             result_code = False
 
       return result_code

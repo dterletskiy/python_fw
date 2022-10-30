@@ -69,8 +69,8 @@ def to_string( container, new_line = True ):
 
 # Split string by multiple separators
 # Example:
-#     multiple_split( string, "<>, " )
-def multiple_split( string: str, separators: str ):
+#     string_list = multiple_split( string, [ "<", ">", ",", " " ] )
+def multiple_split( string: str, separators: list ):
    string_list: list = [ string ]
    for separator in separators:
       new_string_list: list = [ ]
