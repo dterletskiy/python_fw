@@ -21,26 +21,53 @@ class eOutput( enum.IntEnum ):
 # class eOutput
 
 def run_and_wait_with_status( command: str, *argv, **kwargs ):
-   kw_args = kwargs.get( "args", [ ] )
-   kw_test = kwargs.get( "test", False )
-   kw_env = kwargs.get( "env", os.environ.copy( ) )
-   kw_shell = kwargs.get( "shell", True )
-   kw_output = kwargs.get( "output", eOutput.PIPE )
-   kw_cwd = kwargs.get( "cwd", None )
-   kw_collect = kwargs.get( "collect", True )
-   kw_print = kwargs.get( "print", True )
-   kw_executable = kwargs.get( "executable", None )
-   kw_universal_newlines = kwargs.get( "universal_newlines", False )
-   kw_expected_return_code = kwargs.get( "expected_return_code", 0 )
-   kw_chroot = kwargs.get( "chroot", None )
-   kw_chroot_bash = kwargs.get( "chroot_bash", None )
-   kw_method = kwargs.get( "method", "subprocess" )
+   kw_args = kwargs.get( "args", [ ] )                                  # [ str ]
+   kw_test = kwargs.get( "test", False )                                # bool
+   kw_env_set = kwargs.get( "env_set", { } )                            # { str: [ str ] }
+   kw_env_overwrite = kwargs.get( "env_overwrite", { } )                # { str: [ str ] }
+   kw_env_add = kwargs.get( "env_add", { } )                            # { str: [ str ] }
+   kw_shell = kwargs.get( "shell", True )                               # bool
+   kw_output = kwargs.get( "output", eOutput.PIPE )                     # pfw.shell.eOutput
+   kw_cwd = kwargs.get( "cwd", None )                                   # str
+   kw_collect = kwargs.get( "collect", True )                           # bool
+   kw_print = kwargs.get( "print", True )                               # bool
+   kw_executable = kwargs.get( "executable", None )                     # str
+   kw_universal_newlines = kwargs.get( "universal_newlines", False )    # bool
+   kw_expected_return_code = kwargs.get( "expected_return_code", 0 )    # int
+   kw_chroot = kwargs.get( "chroot", None )                             # str
+   kw_chroot_bash = kwargs.get( "chroot_bash", None )                   # str
+   kw_method = kwargs.get( "method", "subprocess" )                     # str
 
 
 
-   terminal_width, terminal_height = pfw.paf.common.get_terminal_dimensions( )
-   kw_env["COLUMNS"] = str( terminal_width )
-   kw_env["LINES"] = str( terminal_height )
+   def build_environment( env_set, env_overwrite, env_add ):
+      environment: dict = { }
+
+      if 0 != len( env_set ):
+         for key in env_set:
+            if 0 != len( env_set[ key ] ):
+               environment[ key ] = ':'.join( str( item ) for item in env_set[ key ] )
+      else:
+         environment = os.environ.copy( )
+
+      for key in env_overwrite:
+         if 0 != len( env_overwrite[ key ] ):
+            environment[ key ] = ':'.join( str( item ) for item in env_overwrite[ key ] )
+
+      for key in env_add:
+         values = environment.get( key, "" )
+         if 0 != len( env_add[ key ] ):
+            values = ':'.join( str( item ) for item in env_add[ key ] ) + ":" + values
+         environment[ key ] = values
+
+      terminal_width, terminal_height = pfw.paf.common.get_terminal_dimensions( )
+      environment["COLUMNS"] = str( terminal_width )
+      environment["LINES"] = str( terminal_height )
+
+      return environment
+   # def build_environment
+
+   environment: dict = build_environment( kw_env_set, kw_env_overwrite, kw_env_add )
 
 
 
@@ -122,6 +149,7 @@ def run_and_wait_with_status( command: str, *argv, **kwargs ):
       return { "code": 255, "output": "this is test" }
 
 
+
    return_code = "200"
    result_output = None
    if "system" == kw_method:
@@ -142,7 +170,7 @@ def run_and_wait_with_status( command: str, *argv, **kwargs ):
             , stdout = output_tuple[1]
             , stderr = output_tuple[1]
             , universal_newlines = kw_universal_newlines
-            , env = kw_env
+            , env = environment
             , shell = kw_shell
             , executable = kw_executable
             , cwd = kw_cwd
