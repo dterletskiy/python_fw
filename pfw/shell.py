@@ -23,9 +23,7 @@ class eOutput( enum.IntEnum ):
 def run_and_wait_with_status( command: str, *argv, **kwargs ):
    kw_args = kwargs.get( "args", [ ] )                                  # [ str ]
    kw_test = kwargs.get( "test", False )                                # bool
-   kw_env_set = kwargs.get( "env_set", { } )                            # { str: [ str ] }
-   kw_env_overwrite = kwargs.get( "env_overwrite", { } )                # { str: [ str ] }
-   kw_env_add = kwargs.get( "env_add", { } )                            # { str: [ str ] }
+   kw_env = kwargs.get( "env", os.environ.copy( ) )                     # { str: str }
    kw_shell = kwargs.get( "shell", True )                               # bool
    kw_output = kwargs.get( "output", eOutput.PIPE )                     # pfw.shell.eOutput
    kw_cwd = kwargs.get( "cwd", None )                                   # str
@@ -40,34 +38,9 @@ def run_and_wait_with_status( command: str, *argv, **kwargs ):
 
 
 
-   def build_environment( env_set, env_overwrite, env_add ):
-      environment: dict = { }
-
-      if 0 != len( env_set ):
-         for key in env_set:
-            if 0 != len( env_set[ key ] ):
-               environment[ key ] = ':'.join( str( item ) for item in env_set[ key ] )
-      else:
-         environment = os.environ.copy( )
-
-      for key in env_overwrite:
-         if 0 != len( env_overwrite[ key ] ):
-            environment[ key ] = ':'.join( str( item ) for item in env_overwrite[ key ] )
-
-      for key in env_add:
-         values = environment.get( key, "" )
-         if 0 != len( env_add[ key ] ):
-            values = ':'.join( str( item ) for item in env_add[ key ] ) + ":" + values
-         environment[ key ] = values
-
-      terminal_width, terminal_height = pfw.paf.common.get_terminal_dimensions( )
-      environment["COLUMNS"] = str( terminal_width )
-      environment["LINES"] = str( terminal_height )
-
-      return environment
-   # def build_environment
-
-   environment: dict = build_environment( kw_env_set, kw_env_overwrite, kw_env_add )
+   terminal_width, terminal_height = pfw.paf.common.get_terminal_dimensions( )
+   kw_env["COLUMNS"] = str( terminal_width )
+   kw_env["LINES"] = str( terminal_height )
 
 
 
@@ -170,7 +143,7 @@ def run_and_wait_with_status( command: str, *argv, **kwargs ):
             , stdout = output_tuple[1]
             , stderr = output_tuple[1]
             , universal_newlines = kw_universal_newlines
-            , env = environment
+            , env = kw_env
             , shell = kw_shell
             , executable = kw_executable
             , cwd = kw_cwd
