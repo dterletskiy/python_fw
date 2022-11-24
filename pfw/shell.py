@@ -20,6 +20,22 @@ class eOutput( enum.IntEnum ):
    PTY   = 1
 # class eOutput
 
+# Function for executing shell command
+#     command - shell command
+#     argv - list of command arguments
+#     args - list of command arguments
+#     env - environment variables (default = current scipt environment variables)
+#     shell - boolean parameter what indicates will this command be executed by 'subprocess' with corresponding shell value
+#     output - outpot type PIPE or PTY
+#     cwd - chande directory before execution to directory mentioned in this parameter (default = None)
+#     collect - store output to returned value or not (default = True)
+#     print - print output or not (default = True)
+#     executable - specifies a replacement program to execute (default = None)
+#     universal_newlines - 
+#     expected_return_code - expecter return code for succeed execution (default = 0)
+#     chroot - use 'chroot' for execution with path mentioned in current parameter (default = None)
+#     chroot_bash - use 'chroot' for execution as shell command with path mentioned in current parameter (default = None)
+#     method - method what will be used for execution: 'system' or 'subprocess' (default = subprocess)
 def run_and_wait_with_status( command: str, *argv, **kwargs ):
    kw_args = kwargs.get( "args", [ ] )                                  # [ str ]
    kw_test = kwargs.get( "test", False )                                # bool
@@ -129,12 +145,15 @@ def run_and_wait_with_status( command: str, *argv, **kwargs ):
       return_code = os.system( command_line )
 
    elif "subprocess" == kw_method:
-      def signal_winsize_handler( signum, frame ):
-         if signal.SIGWINCH == signum:
-            os.kill( sub_process.pid, signal.SIGWINCH )
 
-      old_action = signal.getsignal( signal.SIGWINCH )
-      signal.signal( signal.SIGWINCH, signal_winsize_handler )
+      def signal_winsize_handler( signum, frame ):
+         pfw.console.debug.warning( f"processing signal: {signum}" )
+         if signal.SIGWINCH == signum:
+            pass
+      # def signal_winsize_handler
+
+      signal_winsize_handler_old = signal.getsignal( signal.SIGWINCH )
+      # signal.signal( signal.SIGWINCH, signal_winsize_handler )
 
 
       process = subprocess.Popen(
@@ -258,7 +277,7 @@ def run_and_wait_with_status( command: str, *argv, **kwargs ):
          if pfw.paf.common.isatty( sys.stdin ):
             termios.tcsetattr( sys.stdin, termios.TCSADRAIN, oldtty )
 
-      signal.signal( signal.SIGWINCH, old_action )
+      signal.signal( signal.SIGWINCH, signal_winsize_handler_old )
 
       return_code = process.poll( )
 

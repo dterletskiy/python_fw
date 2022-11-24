@@ -98,6 +98,24 @@ def umount( file: str ):
    return True
 # def umount
 
+def mounted_to( file: str ):
+   # Fake command to execute it with 'root' to avoid password promt string in next command what will go to result
+   pfw.shell.execute( f"sudo -S pwd", output = pfw.shell.eOutput.PTY, print = False, collect = False )
+
+   result = pfw.shell.execute( f"sudo -S mount | grep {file}", output = pfw.shell.eOutput.PTY )
+
+   if 0 != result["code"]:
+      return None
+
+   match = re.match( rf"^{file} on (.+) type (.+)$", result["output"] )
+   if match:
+      mount_point = match.group( 1 )
+      pfw.console.debug.info( f"image '{file}' mounted to '{mount_point}'" )
+      return mount_point
+
+   return None
+# def mounted_to
+
 def gen_mount_point( dir_name: str, prefix: str = "mp" ):
    mount_point = None
    while None == mount_point or True == os.path.exists( mount_point ):
@@ -131,7 +149,28 @@ def detach( device: str ):
    return True
 # def detach
 
+def attached_to( file: str ):
+   # Fake command to execute it with 'root' to avoid password promt string in next command what will go to result
+   pfw.shell.execute( f"sudo -S pwd", output = pfw.shell.eOutput.PTY, print = False, collect = False )
+
+   result = pfw.shell.execute( f"sudo -S losetup --list | grep {file}", output = pfw.shell.eOutput.PTY )
+
+   if 0 != result["code"]:
+      return None
+
+   match = re.match( rf"^(\S+)\s+\d+\s+\d+\s+\d+\s+\d+\s+{file}\s+.+$", result["output"] )
+   if match:
+      attach_point = match.group( 1 )
+      pfw.console.debug.info( f"image '{file}' attached to '{attach_point}'" )
+      return attach_point
+
+   return None
+# def mounted_to
+
 def info( image_file: str ):
+   # Fake command to execute it with 'root' to avoid password promt string in next command what will go to result
+   pfw.shell.execute( f"sudo -S pwd", output = pfw.shell.eOutput.PTY, print = False, collect = False )
+
    command = f"sudo -S parted {image_file} UNIT b print"
    result = pfw.shell.execute( command, output = pfw.shell.eOutput.PTY )
 
@@ -186,27 +225,26 @@ def info( image_file: str ):
          )
       )
 
+   image = None
+
    # Parse image info about type and common size
    parted_image = parted_output[1].split(":")
    if( "loop" == parted_image[5] ):
       if( 1 != len( partitions ) ):
-         pfw.console.debug.error( f"Image type defined as 'partition' but it contains {len( partitions )} inside" )
-         return None
-      # return Partition( ) # @TDA: should be implemented
-      return None
+         pfw.console.debug.error( f"Image type defined as 'partition' but it contains {len( partitions )} aprtitions inside" )
+      image = Partition( )
    elif( "msdos" == parted_image[5] or "gpt" == parted_image[5] ):
       # return Drive( ) # @TDA: should be implemented
-      return None
+      image = Drive( )
    else:
       pfw.console.debug.error( f"Undefined image type {image_file}" )
-      return None
 
    pfw.console.debug.ok( "-------------------------------------------------------------------" )
    for partition in partitions:
       partition.info( )
    pfw.console.debug.ok( "-------------------------------------------------------------------" )
 
-
+   return [ partitions, image ]
 # def info
 
 
@@ -537,6 +575,10 @@ class Partition:
          )["code"]
    # def mkdir
 
+   def mount_point( self ):
+      return self.__description.mount_point( )
+   # def mount_point
+
 
 
    __description: Description = None
@@ -582,8 +624,8 @@ class Drive:
       self.__size.info( tabulations + 1 )
       pfw.console.debug.info( "attached:  \'", self.__attached_to, "\'", tabs = ( tabulations + 1 ) )
       pfw.console.debug.info( "bootable:  \'", self.__bootable_index, "\'", tabs = ( tabulations + 1 ) )
-      for index in range( len( self.__partitions ) ):
-         self.__partitions[index].info( tabulations + 1 )
+      for partition in self.__partitions:
+         partition.info( tabulations + 1 )
    # def info
 
    def create( self, **kwargs ):
@@ -685,8 +727,14 @@ class Drive:
          dump_file.write( "unit: sectors\n" )
          dump_file.write( "\n" )
          next_start: int = 2048
-         for index in range( len( partitions ) ):
-            self.__partitions.append( Partition.Description( next_start, partitions[index].size( ), 83 ) )
+         for index, partition in enumerate( partitions ):
+            self.__partitions.append(
+                  Partition.Description(
+                     start = next_start,
+                     size = partitions[index].size( ),
+                     type = 83
+                  )
+               )
 
             dump_file.write(
                   self.__attached_to + "p" + str(index + 1) + 
@@ -708,9 +756,7 @@ class Drive:
          pfw.shell.execute( f"sudo parted {self.__attached_to} -s mklabel gpt" )
 
          ( start, end ) = ( pfw.size.SizeZero, self.__reserved_start_size - pfw.size.SizeSector )
-         for index in range( len( partitions ) ):
-            partition = partitions[index]
-
+         for index, partition in enumerate( partitions ):
             start = end + pfw.size.SizeSector
             end = end + partition.size( )
 
@@ -751,8 +797,7 @@ class Drive:
          pfw.console.debug.error( "image must be attached" )
          return False
 
-      for index in range( len( self.__partitions ) ):
-         partition = self.__partitions[index]
+      for index, partition in enumerate( self.__partitions ):
          if None != partition.clone_from( ):
             pfw.shell.execute(
                   f"sudo dd if={partition.clone_from( )} of={self.__attached_to}p{index + 1} bs=1M status=none", test = False

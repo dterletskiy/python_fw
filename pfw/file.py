@@ -7,6 +7,7 @@ import filetype
 import enum
 
 import pfw.console
+import pfw.shell
 
 
 
@@ -92,3 +93,14 @@ def current_script_dir( ):
 def change_dir( destination: str ):
    os.chdir( destination )
 # def change_dir
+
+def size( path: str ):
+   # Fake command to execute it with 'root' to avoid password promt string in next command what will go to result
+   pfw.shell.execute( f"sudo -S pwd", output = pfw.shell.eOutput.PTY, print = False, collect = False )
+
+   result = pfw.shell.execute( f"sudo -S du -hsb {path}", output = pfw.shell.eOutput.PTY )
+   if 0 != result["code"]:
+      return None
+
+   return int( result["output"].split( )[ 0 ] )
+# def file_size

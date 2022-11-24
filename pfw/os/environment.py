@@ -5,30 +5,10 @@ import pfw.shell
 
 
 
-def is_process_running( name: str ):
-   result = pfw.shell.execute( f"pgrep -x {name}", output = pfw.shell.eOutput.PTY )
-   if 0 == result["code"] and None != result["output"]:
-      return int( result["output"] )
-
-   return None
-# def is_process_running
-
-def kill_process( name: str ):
-   pid = is_process_running( name )
-   if None != pid:
-      pfw.shell.execute( f"sudo -S kill -9 {str( pid )}", output = pfw.shell.eOutput.PTY )
-
-   return None
-# def kill_process
-
-def kill_process_all( name: str ):
-   pfw.shell.execute( f"killall {name}", output = pfw.shell.eOutput.PTY )
-# def kill_process_all
-
 # env_set is { str: [ str ] }
 # env_overwrite is { str: [ str ] }
 # env_add is { str: [ str ] }
-def build_environment( env_set = None, env_overwrite = None, env_add = None ):
+def build( env_set = None, env_overwrite = None, env_add = None ):
    environment: dict = { }
 
    if None != env_set:
@@ -51,4 +31,4 @@ def build_environment( env_set = None, env_overwrite = None, env_add = None ):
          environment[ key ] = values
 
    return environment
-# def build_environment
+# def build
