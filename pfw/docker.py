@@ -115,7 +115,7 @@ class Container:
          output = result["output"].split( "\r\n" )
          if None != output and 1 < len( output ):
             output_list = output[1].split( )
-            pfw.console.debug.error( "Container with name '%s' already exists with id '%s'" % (kw_name, output_list[0]) )
+            pfw.console.debug.warning( "Container with name '%s' already exists with id '%s'" % (kw_name, output_list[0]) )
             return { "id": output_list[0], "image": output_list[1] }
 
       return None
@@ -184,7 +184,7 @@ class Container:
 
    def exec( self, cmd: str ):
       command: str = f"docker exec -it {self.__name} {cmd}"
-      pfw.shell.execute( command, output = pfw.shell.eOutput.PTY )
+      return pfw.shell.execute( command, output = pfw.shell.eOutput.PTY )
    # def exec
 
    def __add_volume_mapping( self, **kwargs ):
