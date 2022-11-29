@@ -133,8 +133,9 @@ def attach( file: str ):
       pfw.console.debug.error( "attach file '%s' error: '%s'" % ( file, result["code"] ) )
       return None
 
-   pfw.console.debug.info( "file '%s' attached to '%s'" % ( file, result["output"] ) )
-   return result["output"]
+   attached_to = result["output"].split( "\r\n" )[0]
+   pfw.console.debug.info( "file '%s' attached to '%s'" % ( file, attached_to ) )
+   return attached_to
 # def attach
 
 def detach( device: str ):
