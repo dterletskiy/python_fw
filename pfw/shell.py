@@ -194,7 +194,8 @@ def run_and_wait_with_status( command: str, *argv, **kwargs ):
                      sys.stdout.buffer.write( output.replace( b'\n', b'\r\n' ) )
                      sys.stdout.flush( )
                   if True == kw_collect:
-                     result_output += output.strip( ).decode("utf-8")
+                     # result_output += output.strip( ).decode( encoding = 'utf-8', errors = 'ignore' )
+                     result_output += output.decode( encoding = 'utf-8', errors = 'ignore' )
 
                if sys.stdin in r:
                   output = os.read( sys.stdin.fileno( ), 10240 )
@@ -225,7 +226,8 @@ def run_and_wait_with_status( command: str, *argv, **kwargs ):
                      sys.stdout.buffer.write( output.replace( b'\n', b'\r\n' ) )
                      sys.stdout.flush( )
                   if True == kw_collect:
-                     result_output += output.strip( ).decode("utf-8")
+                     # result_output += output.strip( ).decode( encoding = 'utf-8', errors = 'ignore' )
+                     result_output += output.decode( encoding = 'utf-8', errors = 'ignore' )
 
                if process.stderr.fileno( ) in r:
                   output = process.stderr.read1( )
