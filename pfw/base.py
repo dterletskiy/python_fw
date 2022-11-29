@@ -67,6 +67,7 @@ def to_string( container, new_line = True ):
 
    return string
 
+# https://stackoverflow.com/a/12214880
 def ascii_string_to_hex_string( string: str, separator: str = ":" ) -> str:
    return f"{separator}".join( "{:02x}".format( ord(c) ) for c in string )
    # f"{separator}".join( hex( ord(c) )[2:] for c in string )
