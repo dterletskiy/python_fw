@@ -67,6 +67,10 @@ def to_string( container, new_line = True ):
 
    return string
 
+def ascii_string_to_hex_string( string: str, separator: str = ":" ) -> str:
+   return f"{separator}".join( "{:02x}".format( ord(c) ) for c in string )
+   # f"{separator}".join( hex( ord(c) )[2:] for c in string )
+
 # Split string by multiple separators
 # Example:
 #     string_list = multiple_split( string, [ "<", ">", ",", " " ] )
