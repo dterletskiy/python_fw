@@ -52,6 +52,7 @@ def run_and_wait_with_status( command: str, *argv, **kwargs ):
    kw_chroot_bash = kwargs.get( "chroot_bash", None )                   # str
    kw_method = kwargs.get( "method", "subprocess" )                     # str
    kw_ssh = kwargs.get( "ssh", None )                                   # { str: str }
+   kw_sudo = kwargs.get( "sudo", False )                                # bool
 
 
 
@@ -83,6 +84,7 @@ def run_and_wait_with_status( command: str, *argv, **kwargs ):
 
    def command_builder( command, args, *argv, **kwargs ):
       kw_string = kwargs.get( "string", False )
+      kw_sudo = kwargs.get( "sudo", False )
       kw_chroot = kwargs.get( "chroot", None )
       kw_chroot_bash = kwargs.get( "chroot_bash", None )
 
@@ -107,20 +109,22 @@ def run_and_wait_with_status( command: str, *argv, **kwargs ):
       command_line = command_line + builder( list( argv ) )
       command_line = command_line + builder( args )
 
+      if None != kw_chroot_bash:
+         command_line = [ "chroot", f"{kw_chroot_bash}", "bash", "-c" ] + ["\""] + command_line + ["\""]
+         kw_sudo = True
+      elif None != kw_chroot:
+         command_line = [ "chroot", f"{kw_chroot}" ] + command_line
+         kw_sudo = True
+
+      if True == kw_sudo:
+         command_line = [ "sudo", "-S" ] + command_line
+
       if True == kw_string:
          command_line = ' '.join( command_line )
 
       if str is type( command_line ):
-         if None != kw_chroot_bash:
-            command_line = f"sudo chroot {kw_chroot_bash} bash -c \"" + command_line + "\""
-         elif None != kw_chroot:
-            command_line = f"sudo chroot {kw_chroot} {command_line}"
          pfw.console.debug.header( f"command: '{command_line}'" )
       elif list is type( command_line ):
-         if None != kw_chroot_bash:
-            command_line = [ "sudo", "chroot", f"{kw_chroot_bash}", "bash", "-c" ] + ["\""] + command_line + ["\""]
-         elif None != kw_chroot:
-            command_line = [ "sudo", "chroot", f"{kw_chroot}" ] + command_line
          pfw.console.debug.header( f"command: {command_line}" )
 
       return command_line
@@ -133,7 +137,7 @@ def run_and_wait_with_status( command: str, *argv, **kwargs ):
       return command_builder( command, kw_args, *argv, string = kw_string )
    # def command_builder_test
 
-   command_line = command_builder( command, kw_args, *argv, string = kw_shell, chroot_bash = kw_chroot_bash, chroot = kw_chroot )
+   command_line = command_builder( command, kw_args, *argv, sudo = kw_sudo, string = kw_shell, chroot_bash = kw_chroot_bash, chroot = kw_chroot )
 
    if True == kw_test:
       return { "code": 255, "output": "this is test" }
