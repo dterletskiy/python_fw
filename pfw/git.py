@@ -2,6 +2,7 @@ import os
 import re
 
 import pfw.console
+import pfw.shell
 
 
 
@@ -250,6 +251,11 @@ class Collector:
       for repo in self.__repos:
          repo.pull( )
    # def pull
+
+   def status( self ):
+      for repo in self.__repos:
+         repo.status( )
+   # def status
 
    __name: str = None
    __repos: list = [ ]

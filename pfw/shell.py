@@ -53,6 +53,7 @@ def run_and_wait_with_status( command: str, *argv, **kwargs ):
    kw_method = kwargs.get( "method", "subprocess" )                     # str
    kw_ssh = kwargs.get( "ssh", None )                                   # { str: str }
    kw_sudo = kwargs.get( "sudo", False )                                # bool
+   kw_print_command = kwargs.get( "print_command", True )               # bool
 
 
 
@@ -122,11 +123,6 @@ def run_and_wait_with_status( command: str, *argv, **kwargs ):
       if True == kw_string:
          command_line = ' '.join( command_line )
 
-      if str is type( command_line ):
-         pfw.console.debug.header( f"command: '{command_line}'" )
-      elif list is type( command_line ):
-         pfw.console.debug.header( f"command: {command_line}" )
-
       return command_line
    # def command_builder
 
@@ -137,7 +133,26 @@ def run_and_wait_with_status( command: str, *argv, **kwargs ):
       return command_builder( command, kw_args, *argv, string = kw_string )
    # def command_builder_test
 
+   def print_command( command, **kwargs ):
+      kw_enable = kwargs.get( "enable", True )
+
+      if False == kw_enable:
+         return
+
+      string: str = f"command:"
+      if str is type( command ):
+         string += f" '{command}'"
+      elif list is type( command ):
+         string += f" {command}"
+
+      if None != kw_cwd:
+         string = f"[cd {kw_cwd};] {string}"
+
+      pfw.console.debug.header( f"{string}" )
+   # def print_command
+
    command_line = command_builder( command, kw_args, *argv, sudo = kw_sudo, string = kw_shell, chroot_bash = kw_chroot_bash, chroot = kw_chroot )
+   print_command( command_line, enable = kw_print_command )
 
    if True == kw_test:
       return { "code": 255, "output": "this is test" }
