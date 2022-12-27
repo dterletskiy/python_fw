@@ -6,9 +6,30 @@ import pfw.console
 
 
 
-def clean_all( ):
+def install( ):
+   pfw.shell.execute( "apt update", sudo = True, output = pfw.shell.eOutput.PTY )
+   pfw.shell.execute( "apt install -y ca-certificates curl gnupg lsb-release", sudo = True, output = pfw.shell.eOutput.PTY )
+
+   DOCKER_URL = "https://download.docker.com/linux/ubuntu"
+   DOCKER_GPG_KEY_URL = f"{DOCKER_URL}/gpg"
+   KEYRING_FILE = "/usr/share/keyrings/docker-archive-keyring.gpg"
+
+   command = f"if [ ! -f {KEYRING_FILE} ]; then curl -fsSL {DOCKER_GPG_KEY_URL} | sudo -S gpg --dearmor -o {KEYRING_FILE}; fi"
+   pfw.shell.execute( command, output = pfw.shell.eOutput.PTY )
+
+   target_string = f"deb [arch=$(dpkg --print-architecture) signed-by={KEYRING_FILE}] {DOCKER_URL} $(lsb_release -cs) stable"
+   command = "echo \"" + target_string + "\" | sudo -S tee /etc/apt/sources.list.d/docker.list > /dev/null"
+   pfw.shell.execute( command, output = pfw.shell.eOutput.PTY )
+
+   pfw.shell.execute( "apt update", sudo = True, output = pfw.shell.eOutput.PTY )
+   pfw.shell.execute( "apt install -y docker-ce docker-ce-cli containerd.io", sudo = True, output = pfw.shell.eOutput.PTY )
+   pfw.shell.execute( "groupadd docker", sudo = True, output = pfw.shell.eOutput.PTY )
+   pfw.shell.execute( "usermod -aG docker ${USER}", sudo = True, output = pfw.shell.eOutput.PTY )
+# def install
+
+def prune( ):
    pfw.shell.execute( "docker system prune --all --volumes", output = pfw.shell.eOutput.PTY )
-# def clean_all
+# def prune
 
 
 
@@ -113,10 +134,11 @@ class Container:
          command = f"docker ps -a -f name={kw_name}"
          result = pfw.shell.execute( command, output = pfw.shell.eOutput.PTY )
          output = result["output"].split( "\r\n" )
-         if None != output and 1 < len( output ):
+         if None != output:
             output_list = output[1].split( )
-            pfw.console.debug.warning( "Container with name '%s' already exists with id '%s'" % (kw_name, output_list[0]) )
-            return { "id": output_list[0], "image": output_list[1] }
+            if 0 < len( output_list ) and kw_name == output_list[-1]:
+               pfw.console.debug.warning( "Container with name '%s' already exists with id '%s'" % (kw_name, output_list[0]) )
+               return { "id": output_list[0], "image": output_list[1] }
 
       return None
    # def is_exists
