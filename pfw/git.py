@@ -105,6 +105,12 @@ class Repo:
       pfw.shell.execute( command, output = pfw.shell.eOutput.PTY, cwd = self.__directory )
    # def pull
 
+   def push( self ):
+      command = "git push"
+
+      pfw.shell.execute( command, output = pfw.shell.eOutput.PTY, cwd = self.__directory )
+   # def push
+
    def status( self ):
       command = "git status"
 
@@ -251,6 +257,11 @@ class Collector:
       for repo in self.__repos:
          repo.pull( )
    # def pull
+
+   def push( self ):
+      for repo in self.__repos:
+         repo.push( )
+   # def push
 
    def status( self ):
       for repo in self.__repos:
