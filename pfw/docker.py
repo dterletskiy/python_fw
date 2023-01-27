@@ -31,6 +31,49 @@ def prune( ):
    pfw.shell.execute( "docker system prune --all --volumes", output = pfw.shell.eOutput.PTY )
 # def prune
 
+def commit( **kwargs ):
+   kw_author = kwargs.get( "author", None )
+   kw_message = kwargs.get( "message", None )
+   kw_container = kwargs.get( "container", None )
+   kw_image = kwargs.get( "image", None )
+   kw_change = kwargs.get( "change", { } )
+   # kw_change = kwargs.get( "change", { "USER": "root", "ENV": [ "PATH ~/.local/bin:\${PATH}" ] } )
+
+   command: str = "docker commit"
+   command += f" --author '{kw_author}'" if kw_author else ""
+   command += f" --message '{kw_message}'" if kw_message else ""
+   for key, value in kw_change.items( ):
+      if "USER" == key:
+         command += f" --change 'USER {value}'"
+      elif "ENV" == key:
+         if isinstance( value, list ) or isinstance( value, tuple ):
+            for item in value:
+               command += f" --change 'ENV {item}'"
+         elif isinstance( value, str ):
+            command += f" --change 'ENV {item}'"
+      else:
+         pfw.console.debug.warning( f"unsuported parameter '{key}' for --change" )
+   command += f" {kw_container}"
+   command += f" {kw_image}"
+   pfw.shell.execute( command, output = pfw.shell.eOutput.PTY )
+# def commit
+
+def build( **kwargs ):
+   kw_dokerfile = kwargs.get( "dokerfile", None )
+   kw_image_name = kwargs.get( "image_name", None )
+   kw_image_tag = kwargs.get( "image_tag", None )
+   kw_build_args = kwargs.get( "build_args", [ ] )
+
+   command: str = "docker build"
+   command += " --no-cache=True"
+   command += f" --file {kw_dokerfile}" if kw_dokerfile else ""
+   command += f" --tag {kw_image_name}" if kw_image_name else ""
+   command += f":{kw_image_tag}" if kw_image_name and kw_image_tag else ""
+   for build_arg in kw_build_args:
+      command += f" --build-arg {build_arg}" if build_arg else ""
+   pfw.shell.execute( command, output = pfw.shell.eOutput.PTY )
+# def build
+
 
 
 class Container:
@@ -149,8 +192,10 @@ class Container:
 
    def pull( self, name: str, tag: str ):
       command: str = f"docker pull {name}"
-      command += f":{tag}" if None != tag else ""
-      pfw.shell.execute( command, output = pfw.shell.eOutput.PTY )
+      command += f":{tag}" if tag else ""
+      result = pfw.shell.execute( command, output = pfw.shell.eOutput.PTY )
+
+      return 0 == result["code"]
    # def pull
 
    def create( self ):
@@ -171,13 +216,14 @@ class Container:
 
    def run( self ):
       kw_daemon = kwargs.get( "daemon", False )
+      kw_disposable = kwargs.get( "disposable", False )
 
       if None != self.is_exists( ):
          return False
 
       command: str = f"docker run --name {self.__name} --hostname {self.__hostname} -it"
-      if True == kw_daemon:
-         command += " -d"
+      command += " -d" if kw_daemon else ""
+      command += " --rm" if kw_disposable else ""
       for item in self.__volume_mapping:
          command += f" -v {item.host( )}:{item.guest( )}"
          pfw.shell.execute( f"mkdir -p {item.host( )}" )
@@ -208,6 +254,11 @@ class Container:
       command: str = f"docker exec -it {self.__name} {cmd}"
       return pfw.shell.execute( command, output = pfw.shell.eOutput.PTY )
    # def exec
+
+   def commit( self, **kwargs ):
+      kwargs[ "container" ] = self.__name
+      commit( **kwargs )
+   # def commit
 
    def __add_volume_mapping( self, **kwargs ):
       kw_host = kwargs.get( "host", None )
