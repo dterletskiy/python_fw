@@ -234,16 +234,16 @@ class Collector:
       result: bool = True
 
       if None != kw_repo:
-         result &=  self.add_repo( kw_repo )
+         result &= self.add_repo( kw_repo )
 
       if None != kw_repos:
-         result &=  self.add_repos( kw_repos )
+         result &= self.add_repos( kw_repos )
 
       if None != kw_url:
-         result &=  self.add_url( kw_url )
+         result &= self.add_url( kw_url )
 
       if None != kw_urls:
-         result &=  self.add_urls( kw_urls )
+         result &= self.add_urls( kw_urls )
 
       return result
    # def add
@@ -283,17 +283,17 @@ def example( ):
 
    repo_dir = "/mnt/dev/tmp/"
    repos = [
-      pfw.git.Repo(
+      pfw.linux.git.Repo(
             url = "git@github.com:dterletskiy/carpc-tutorial.git",
             directory = repo_dir,
             structure = True
          ),
-      pfw.git.Repo(
+      pfw.linux.git.Repo(
             url = "git@github.com:dterletskiy/carpc-examples.git",
             directory = repo_dir,
             structure = True
          ),
    ]
-   repo_collector = pfw.git.Collector( repos = repos, urls = urls, directory = repo_dir )
+   repo_collector = pfw.linux.git.Collector( repos = repos, urls = urls, directory = repo_dir )
    repo_collector.info( )
 # def example

@@ -4,8 +4,6 @@ from enum import Enum
 
 import pfw.base
 import pfw.console
-import pfw.shell
-import pfw.size
 
 
 

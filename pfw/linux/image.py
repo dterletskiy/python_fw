@@ -7,6 +7,7 @@ import pfw.base
 import pfw.console
 import pfw.shell
 import pfw.size
+import pfw.linux.file
 
 
 
@@ -41,7 +42,7 @@ def format( file_name: str, file_system: str ):
       pfw.console.debug.error( "'%s' does not exist" % file_name )
       return False
 
-   command: str = f"sudo -S mkfs -V "
+   command: str = f"mkfs -V "
 
    result: bool = False
    for family in FILE_SYSTEMS:
@@ -56,31 +57,31 @@ def format( file_name: str, file_system: str ):
 
    command = command + f" {file_name}"
 
-   return 0 == pfw.shell.execute( command, output = pfw.shell.eOutput.PTY )["code"]
+   return 0 == pfw.shell.execute( command, sudo = True, output = pfw.shell.eOutput.PTY )["code"]
 # def format
 
-def mount( file: str, mount_point: str, fs: str = None ):
-   if None == mount_point:
-      pfw.console.debug.warning( "Mountpoint is not defined" )
-      return False
+def mount( image_file: str, **kwargs ):
+   kw_mount_point = kwargs.get( "mount_point", None )
+   kw_fs = kwargs.get( "fs", None )
 
-   result_code = pfw.shell.execute( f"sudo -S mkdir -p {mount_point}", output = pfw.shell.eOutput.PTY )["code"]
-   if 0 != result_code:
-      pfw.console.debug.error( "create directory '%s' error: %d" % ( mount_point, result_code ) )
-      return False
+   kw_mount_point = kw_mount_point if kw_mount_point else pfw.linux.file.mktemp( directory = True )
 
-   command: str = f"sudo -S mount"
-   if None != fs:
-      command += f" -t {fs}"
-   command += f" {file} {mount_point}"
+   if not os.path.exists( kw_mount_point ):
+      result_code = pfw.shell.execute( f"mkdir -p {kw_mount_point}", sudo = True, output = pfw.shell.eOutput.PTY )["code"]
+      if 0 != result_code:
+         pfw.console.debug.error( "create directory '%s' error: %d" % ( kw_mount_point, result_code ) )
+         return None
+
+   command: str = f"mount"
+   command += f" -t {kw_fs}" if kw_fs else ""
+   command += f" {image_file} {kw_mount_point}"
    command += f" -o loop"
-
-   result_code = pfw.shell.execute( command, output = pfw.shell.eOutput.PTY )["code"]
+   result_code = pfw.shell.execute( command, sudo = True, output = pfw.shell.eOutput.PTY )["code"]
    if 0 != result_code:
-      pfw.console.debug.error( "mount file '%s' to directory '%s' error: '%s'" % ( file, mount_point, result_code ) )
-      return False
+      pfw.console.debug.error( "mount image file '%s' to directory '%s' error: '%s'" % ( image_file, kw_mount_point, result_code ) )
+      return None
 
-   return True
+   return kw_mount_point
 # def mount
 
 def umount( file: str ):
@@ -88,9 +89,7 @@ def umount( file: str ):
       pfw.console.debug.warning( "Mountpoint (or image file) is not defined" )
       return False
 
-   command: str = f"sudo -S umount {file}"
-
-   result_code = pfw.shell.execute( command, output = pfw.shell.eOutput.PTY )["code"]
+   result_code = pfw.shell.execute( f"umount {file}", sudo = True, output = pfw.shell.eOutput.PTY )["code"]
    if 0 != result_code:
       pfw.console.debug.error( "umount file '%s' error: '%s'" % ( file, result_code ) )
       return False
@@ -99,10 +98,11 @@ def umount( file: str ):
 # def umount
 
 def mounted_to( file: str ):
+   # @TDA: To implement lates in general implementation.
    # Fake command to execute it with 'root' to avoid password promt string in next command what will go to result
-   pfw.shell.execute( f"sudo -S pwd", output = pfw.shell.eOutput.PTY, print = False, collect = False )
+   pfw.shell.execute( f"pwd", sudo = True, output = pfw.shell.eOutput.PTY, print = False, collect = False )
 
-   result = pfw.shell.execute( f"sudo -S mount | grep {file}", output = pfw.shell.eOutput.PTY )
+   result = pfw.shell.execute( f"mount | grep {file}", sudo = True, output = pfw.shell.eOutput.PTY )
 
    if 0 != result["code"]:
       return None
@@ -126,9 +126,7 @@ def gen_mount_point( dir_name: str, prefix: str = "mp" ):
 # def gen_mount_point
 
 def attach( file: str ):
-   command: str = f"sudo -S losetup --find --show --partscan {file}"
-
-   result = pfw.shell.execute( command, output = pfw.shell.eOutput.PTY )
+   result = pfw.shell.execute( f"losetup --find --show --partscan {file}", sudo = True, output = pfw.shell.eOutput.PTY )
    if 0 != result["code"]:
       pfw.console.debug.error( "attach file '%s' error: '%s'" % ( file, result["code"] ) )
       return None
@@ -139,9 +137,7 @@ def attach( file: str ):
 # def attach
 
 def detach( device: str ):
-   command: str = f"sudo -S losetup --detach {device}"
-
-   result_code = pfw.shell.execute( command, output = pfw.shell.eOutput.PTY )["code"]
+   result_code = pfw.shell.execute( f"losetup --detach {device}", sudo = True, output = pfw.shell.eOutput.PTY )["code"]
    if 0 != result_code:
       pfw.console.debug.error( "detach device '%s' error: '%s'" % ( device, result_code ) )
       return False
@@ -151,10 +147,11 @@ def detach( device: str ):
 # def detach
 
 def attached_to( file: str ):
+   # @TDA: To implement lates in general implementation.
    # Fake command to execute it with 'root' to avoid password promt string in next command what will go to result
-   pfw.shell.execute( f"sudo -S pwd", output = pfw.shell.eOutput.PTY, print = False, collect = False )
+   pfw.shell.execute( f"pwd", sudo = True, output = pfw.shell.eOutput.PTY, print = False, collect = False )
 
-   result = pfw.shell.execute( f"sudo -S losetup --list | grep {file}", output = pfw.shell.eOutput.PTY )
+   result = pfw.shell.execute( f"losetup --list | grep {file}", sudo = True, output = pfw.shell.eOutput.PTY )
 
    if 0 != result["code"]:
       return None
@@ -169,15 +166,14 @@ def attached_to( file: str ):
 # def mounted_to
 
 def info( image_file: str ):
+   # @TDA: To implement lates in general implementation.
    # Fake command to execute it with 'root' to avoid password promt string in next command what will go to result
-   pfw.shell.execute( f"sudo -S pwd", output = pfw.shell.eOutput.PTY, print = False, collect = False )
+   pfw.shell.execute( f"pwd", sudo = True, output = pfw.shell.eOutput.PTY, print = False, collect = False )
 
-   command = f"sudo -S parted {image_file} UNIT b print"
-   result = pfw.shell.execute( command, output = pfw.shell.eOutput.PTY )
+   result = pfw.shell.execute( f"parted {image_file} UNIT b print", sudo = True, output = pfw.shell.eOutput.PTY )
 
    # https://unix.stackexchange.com/a/438308
-   command = f"sudo -S parted -m {image_file} print"
-   result = pfw.shell.execute( command, output = pfw.shell.eOutput.PTY )
+   result = pfw.shell.execute( f"parted -m {image_file} print", sudo = True, output = pfw.shell.eOutput.PTY )
 
    if 0 != result["code"]:
       pfw.console.debug.error( f"parted '{image_file}' information error" )
@@ -389,8 +385,8 @@ class Partition:
          self.__file = file
       # def set_file
 
-      def mount_point( self ):
-         return self.__mount_point
+      def mount_point( self, suffix: str = "" ):
+         return os.path.join( self.__mount_point, suffix ) if self.__mount_point else None
       # def mount_point
 
       def set_mount_point( self, mount_point: str = None ):
@@ -505,7 +501,7 @@ class Partition:
          pfw.console.debug.error( "Partition is not formated: '%s'" % self.__description.file( ) )
          return None
 
-      if False == mount( self.__description.file( ), mount_point, self.__description.fs( ) ):
+      if None == mount( self.__description.file( ), mount_point = mount_point, fs = self.__description.fs( ) ):
          return None
 
       self.__description.set_mount_point( mount_point )
@@ -543,11 +539,7 @@ class Partition:
       if False == os.path.exists( source ):
          return False
 
-      result_code = pfw.shell.execute(
-              "sudo", "cp"
-            , source
-            , os.path.join( self.__description.mount_point( ), destination )
-         )["code"]
+      result_code = pfw.shell.execute( f"cp {source} {self.__description.mount_point( destination )}", sudo = True )["code"]
       if 0 != result_code:
          return False
 
@@ -558,11 +550,7 @@ class Partition:
       if None == self.__description.mount_point( ):
          return 255
 
-      result_code = pfw.shell.execute(
-              "sudo", "cp"
-            , os.path.join( self.__description.mount_point( ), source )
-            , destination
-         )["code"]
+      result_code = pfw.shell.execute( f"cp {self.__description.mount_point( source )} {destination}", sudo = True )["code"]
       if 0 != result_code:
          return False
 
@@ -570,14 +558,11 @@ class Partition:
    # def copy_from
 
    def mkdir( self, directory: str ):
-      return pfw.shell.execute(
-              "sudo", "mkdir", "-p"
-            , os.path.join( self.__description.mount_point( ), directory )
-         )["code"]
+      return pfw.shell.execute( f"mkdir -p {self.__description.mount_point( directory )}", sudo = True )["code"]
    # def mkdir
 
-   def mount_point( self ):
-      return self.__description.mount_point( )
+   def mount_point( self, suffix: str = "" ):
+      return self.__description.mount_point( suffix )
    # def mount_point
 
 
@@ -763,10 +748,11 @@ class Drive:
 
             # Create partition
             pfw.shell.execute(
-                  f"sudo parted {self.__attached_to} -s mkpart {partition.label( )} {partition.fs( )} {start.sectors( result = 'quotient' )}s {end.sectors( result = 'quotient' )}s"
+                  f"parted {self.__attached_to} -s mkpart {partition.label( )} {partition.fs( )} {start.sectors( result = 'quotient' )}s {end.sectors( result = 'quotient' )}s",
+                  sudo = True
                )
 
-            pfw.shell.execute( f"sudo parted {self.__attached_to} print {index + 1}" )
+            pfw.shell.execute( f"parted {self.__attached_to} print {index + 1}", sudo = True )
 
             # Add partition to the list
             self.__partitions.append(
@@ -780,10 +766,10 @@ class Drive:
                )
 
          if None != self.__bootable_index:
-            pfw.shell.execute( f"sudo parted {self.__attached_to} set {self.__bootable_index} boot on" )
+            pfw.shell.execute( f"parted {self.__attached_to} set {self.__bootable_index} boot on", sudo = True )
 
-         pfw.shell.execute( f"sudo parted {self.__attached_to} -s print unit s print" )
-         pfw.shell.execute( f"sudo partprobe {self.__attached_to}" )
+         pfw.shell.execute( f"parted {self.__attached_to} -s print unit s print", sudo = True )
+         pfw.shell.execute( f"partprobe {self.__attached_to}", sudo = True )
       else:
          raise AttributeError
 
@@ -800,9 +786,7 @@ class Drive:
 
       for index, partition in enumerate( self.__partitions ):
          if None != partition.clone_from( ):
-            pfw.shell.execute(
-                  f"sudo dd if={partition.clone_from( )} of={self.__attached_to}p{index + 1} bs=1M status=none", test = False
-               )
+            pfw.shell.execute( f"dd if={partition.clone_from( )} of={self.__attached_to}p{index + 1} bs=1M status=none", sudo = True )
          else:
             self.format( index + 1, partition.fs( ) )
 
@@ -828,7 +812,7 @@ class Drive:
       if True == gen_subdir:
          mount_point = gen_mount_point( mount_point )
 
-      if False == mount( f"{self.__attached_to}p{partition}", mount_point ):
+      if None == mount( f"{self.__attached_to}p{partition}", mount_point = mount_point ):
          return None
 
       self.__partitions[ partition - 1 ].set_mount_point( mount_point )

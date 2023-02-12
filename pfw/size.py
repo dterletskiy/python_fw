@@ -1,11 +1,11 @@
-from enum import IntEnum
+import enum
 
 import pfw.console
 
 
 
 class Size:
-   class eGran( IntEnum ):
+   class eGran( enum.IntEnum ):
       B = 1024 ** 0
       K = 1024 ** 1
       M = 1024 ** 2
