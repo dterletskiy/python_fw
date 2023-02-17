@@ -4,11 +4,6 @@ import pfw.shell
 
 
 def size( path: str, sudo: bool = False ):
-   # @TDA: To implement lates in general implementation.
-   # Fake command to execute it with 'root' to avoid password promt string in next command what will go to result
-   if sudo:
-      pfw.shell.execute( f"pwd", sudo = sudo, output = pfw.shell.eOutput.PTY, print = False, collect = False )
-
    result = pfw.shell.execute( f"du -hsb {path}", sudo = sudo, output = pfw.shell.eOutput.PTY )
    if 0 != result["code"]:
       return None

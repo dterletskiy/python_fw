@@ -159,6 +159,10 @@ def run_and_wait_with_status( command: str, *argv, **kwargs ):
 
 
 
+   if True == kw_sudo:
+      fake_message = "Fake command to execute it with \'root\' to avoid password promt string in next command what will go to result"
+      os.system( f"sudo echo {fake_message}" )
+
    return_code = "200"
    result_output = None
    if "system" == kw_method:

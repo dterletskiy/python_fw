@@ -98,10 +98,6 @@ def umount( file: str ):
 # def umount
 
 def mounted_to( file: str ):
-   # @TDA: To implement lates in general implementation.
-   # Fake command to execute it with 'root' to avoid password promt string in next command what will go to result
-   pfw.shell.execute( f"pwd", sudo = True, output = pfw.shell.eOutput.PTY, print = False, collect = False )
-
    result = pfw.shell.execute( f"mount | grep {file}", sudo = True, output = pfw.shell.eOutput.PTY )
 
    if 0 != result["code"]:
@@ -147,10 +143,6 @@ def detach( device: str ):
 # def detach
 
 def attached_to( file: str ):
-   # @TDA: To implement lates in general implementation.
-   # Fake command to execute it with 'root' to avoid password promt string in next command what will go to result
-   pfw.shell.execute( f"pwd", sudo = True, output = pfw.shell.eOutput.PTY, print = False, collect = False )
-
    result = pfw.shell.execute( f"losetup --list | grep {file}", sudo = True, output = pfw.shell.eOutput.PTY )
 
    if 0 != result["code"]:
@@ -166,10 +158,6 @@ def attached_to( file: str ):
 # def mounted_to
 
 def info( image_file: str ):
-   # @TDA: To implement lates in general implementation.
-   # Fake command to execute it with 'root' to avoid password promt string in next command what will go to result
-   pfw.shell.execute( f"pwd", sudo = True, output = pfw.shell.eOutput.PTY, print = False, collect = False )
-
    result = pfw.shell.execute( f"parted {image_file} UNIT b print", sudo = True, output = pfw.shell.eOutput.PTY )
 
    # https://unix.stackexchange.com/a/438308
