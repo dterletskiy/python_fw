@@ -54,6 +54,7 @@ def run_and_wait_with_status( command: str, *argv, **kwargs ):
    kw_ssh = kwargs.get( "ssh", None )                                   # { str: str }
    kw_sudo = kwargs.get( "sudo", False )                                # bool
    kw_print_command = kwargs.get( "print_command", True )               # bool
+   kw_processor = kwargs.get( "processor", None )                       # function
 
 
 
@@ -217,8 +218,10 @@ def run_and_wait_with_status( command: str, *argv, **kwargs ):
                      sys.stdout.buffer.write( output.replace( b'\n', b'\r\n' ) )
                      sys.stdout.flush( )
                   if True == kw_collect:
-                     # result_output += output.strip( ).decode( encoding = 'utf-8', errors = 'ignore' )
-                     result_output += output.decode( encoding = 'utf-8', errors = 'ignore' )
+                     # output_decoded = output.strip( ).decode( encoding = 'utf-8', errors = 'ignore' )
+                     output_decoded = output.decode( encoding = 'utf-8', errors = 'ignore' )
+                     result_output += output_decoded
+                     if kw_processor: kw_processor( output_decoded )
 
                if sys.stdin in r:
                   output = os.read( sys.stdin.fileno( ), 10240 )
@@ -249,8 +252,10 @@ def run_and_wait_with_status( command: str, *argv, **kwargs ):
                      sys.stdout.buffer.write( output.replace( b'\n', b'\r\n' ) )
                      sys.stdout.flush( )
                   if True == kw_collect:
-                     # result_output += output.strip( ).decode( encoding = 'utf-8', errors = 'ignore' )
-                     result_output += output.decode( encoding = 'utf-8', errors = 'ignore' )
+                     # output_decoded = output.strip( ).decode( encoding = 'utf-8', errors = 'ignore' )
+                     output_decoded = output.decode( encoding = 'utf-8', errors = 'ignore' )
+                     result_output += output_decoded
+                     if kw_processor: kw_processor( output_decoded )
 
                if process.stderr.fileno( ) in r:
                   output = process.stderr.read1( )
@@ -259,7 +264,10 @@ def run_and_wait_with_status( command: str, *argv, **kwargs ):
                      sys.stderr.buffer.write( output.replace( b'\n', b'\r\n' ) )
                      sys.stderr.flush( )
                   if True == kw_collect:
-                     result_output += output.strip( ).decode("utf-8")
+                     # output_decoded = output.strip( ).decode( encoding = "utf-8" )
+                     output_decoded = output.decode( encoding = "utf-8" )
+                     result_output += output_decoded
+                     if kw_processor: kw_processor( output_decoded )
 
                if sys.stdin in r:
                   output = os.read( sys.stdin.fileno( ), 10240 )
@@ -276,28 +284,6 @@ def run_and_wait_with_status( command: str, *argv, **kwargs ):
 
                if None != process.poll( ):
                   break
-
-
-         # elif eOutput.PIPE == kw_output:
-         #    while True:
-         #       output_line = process.stdout.readline( )
-         #       if output_line:
-         #          if True == kw_print:
-         #             pfw.console.debug.trace( "output: '%s'" % output_line.strip( ) )
-         #          if True == kw_collect:
-         #             result_output += output_line.strip( )
-
-         #       if None == process.poll( ):
-         #          continue
-
-         #       # Process has finished, read rest of the output 
-         #       for output_line in process.stdout.readlines( ):
-         #          if output_line:
-         #             if True == kw_print:
-         #                pfw.console.debug.trace( "output: '%s'" % output_line.strip( ) )
-         #             if True == kw_collect:
-         #                result_output += output_line.strip( )
-         #       break
 
 
          if pfw.paf.common.isatty( sys.stdin ):
