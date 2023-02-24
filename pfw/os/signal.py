@@ -2,7 +2,6 @@ import os
 import signal
 
 import pfw.console
-import pfw.shell
 
 
 

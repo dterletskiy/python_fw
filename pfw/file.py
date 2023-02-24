@@ -95,6 +95,9 @@ def change_dir( destination: str ):
 # def change_dir
 
 def dir_size( path = '.' ):
+   if not os.path.isdir( path ):
+      return None
+
    total = 0
    with os.scandir( path ) as it:
       for entry in it:
@@ -106,7 +109,11 @@ def dir_size( path = '.' ):
 # def dir_size
 
 def file_size( path: str ):
-      return os.path.getsize( path )
+   if not os.path.isfile( path ):
+      return None
+
+   return os.stat( path ).st_size
+   # return os.path.getsize( path )
 # def file_size
 
 def size( path = '.' ):

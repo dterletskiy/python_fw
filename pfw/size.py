@@ -10,6 +10,7 @@ class Size:
       K = 1024 ** 1
       M = 1024 ** 2
       G = 1024 ** 3
+      T = 1024 ** 4
       S = 512
    # class eGran
 
@@ -93,13 +94,16 @@ class Size:
       return False
    # def __eq__
 
-   def info( self, tabulations: int = 0 ):
-      pfw.console.debug.info( self.__class__.__name__, ":", tabs = ( tabulations + 0 ) )
-      pfw.console.debug.info( "bytes:     \'", self.__bytes, "\'", tabs = ( tabulations + 1 ) )
-      pfw.console.debug.info( "sectors:   \'", self.sectors( )["quotient"], "\'", tabs = ( tabulations + 1 ) )
-      pfw.console.debug.info( "kilobytes: \'", self.kilobytes( )["quotient"], "\'", tabs = ( tabulations + 1 ) )
-      pfw.console.debug.info( "megabytes: \'", self.megabytes( )["quotient"], "\'", tabs = ( tabulations + 1 ) )
-      pfw.console.debug.info( "gigabytes: \'", self.gigabytes( )["quotient"], "\'", tabs = ( tabulations + 1 ) )
+   def info( self, **kwargs ):
+      kw_tabulations = kwargs.get( "tabulations", 0 )
+      kw_message = kwargs.get( "message", "" )
+      pfw.console.debug.info( f"{kw_message} (type {self.__class__.__name__}):", tabs = ( kw_tabulations + 0 ) )
+
+      pfw.console.debug.info( "bytes:     \'", self.__bytes, "\'", tabs = ( kw_tabulations + 1 ) )
+      pfw.console.debug.info( "sectors:   \'", self.sectors( )["quotient"], "\'", tabs = ( kw_tabulations + 1 ) )
+      pfw.console.debug.info( "kilobytes: \'", self.kilobytes( )["quotient"], "\'", tabs = ( kw_tabulations + 1 ) )
+      pfw.console.debug.info( "megabytes: \'", self.megabytes( )["quotient"], "\'", tabs = ( kw_tabulations + 1 ) )
+      pfw.console.debug.info( "gigabytes: \'", self.gigabytes( )["quotient"], "\'", tabs = ( kw_tabulations + 1 ) )
    # def info
 
    def align( self, gran: eGran = eGran.S ): 
@@ -176,7 +180,11 @@ SizeSector     = Size( 1, Size.eGran.S )
 
 def min( *argv ):
    min_value: Size = argv[0]
+
    for item in argv:
+      if None == item:
+         continue
+
       if min_value > item:
          min_value = item
 
@@ -185,7 +193,11 @@ def min( *argv ):
 
 def max( *argv ):
    max_value: Size = argv[0]
+
    for item in argv:
+      if None == item:
+         continue
+
       if max_value < item:
          max_value = item
 
@@ -195,7 +207,11 @@ def max( *argv ):
 def min_max( *argv ):
    min_value: Size = argv[0]
    max_value: Size = argv[0]
+
    for item in argv:
+      if None == item:
+         continue
+
       if min_value > item:
          min_value = item
       if max_value < item:

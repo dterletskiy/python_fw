@@ -313,9 +313,9 @@ class Partition:
 
       def info( self, tabulations: int = 0 ):
          pfw.console.debug.info( self.__class__.__name__, ":", tabs = ( tabulations + 0 ) )
-         self.__start.info( tabulations + 1 )
-         self.__end.info( tabulations + 1 )
-         self.__size.info( tabulations + 1 )
+         self.__start.info( message = "start", tabulations = tabulations + 1 )
+         self.__end.info( message = "end", tabulations = tabulations + 1 )
+         self.__size.info( message = "size", tabulations = tabulations + 1 )
          pfw.console.debug.info( "label:        \'", self.__label, "\'", tabs = ( tabulations + 1 ) )
          pfw.console.debug.info( "type:         \'", self.__type, "\'", tabs = ( tabulations + 1 ) )
          pfw.console.debug.info( "fs:           \'", self.__fs, "\'", tabs = ( tabulations + 1 ) )
@@ -595,7 +595,7 @@ class Drive:
    def info( self, tabulations: int = 0 ):
       pfw.console.debug.info( self.__class__.__name__, ":", tabs = ( tabulations + 0 ) )
       pfw.console.debug.info( "file:      \'", self.__file, "\'", tabs = ( tabulations + 1 ) )
-      self.__size.info( tabulations + 1 )
+      self.__size.info( message = "size", tabulations = tabulations + 1 )
       pfw.console.debug.info( "attached:  \'", self.__attached_to, "\'", tabs = ( tabulations + 1 ) )
       pfw.console.debug.info( "bootable:  \'", self.__bootable_index, "\'", tabs = ( tabulations + 1 ) )
       for partition in self.__partitions:
