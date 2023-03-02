@@ -832,6 +832,15 @@ class Drive:
       return result_code
    # def umount
 
+   def build( self, partitions: list, **kwargs ):
+      self.create( partitions = partitions, **kwargs )
+      self.attach( )
+      self.init( partitions, **kwargs )
+      self.info( )
+      self.detach( )
+      return True
+   # def build
+
 
 
 

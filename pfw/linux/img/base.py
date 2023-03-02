@@ -263,10 +263,8 @@ def format( file_name: str, file_system: pfw.linux.fs.FileSystem ):
 # def format
 
 def mount( image_file: str, **kwargs ):
-   kw_mount_point = kwargs.get( "mount_point", None )
+   kw_mount_point = kwargs.get( "mount_point", tempfile.mkdtemp( prefix = "mp_" ) )
    kw_fs = kwargs.get( "fs", None )
-
-   kw_mount_point = kw_mount_point if kw_mount_point else tempfile.mkdtemp( prefix = "mp_" )
 
    if not os.path.exists( kw_mount_point ):
       result_code = pfw.shell.execute( f"mkdir -p {kw_mount_point}", sudo = True, output = pfw.shell.eOutput.PTY )["code"]
@@ -349,6 +347,39 @@ def attached_to( file: str ):
 
    return None
 # def mounted_to
+
+def map( file: str, **kwargs ):
+   kw_mount_point = kwargs.get( "mount_point", tempfile.mkdtemp( prefix = "loop_" ) )
+   kw_processor = kwargs.get( "processor", None )
+
+   description = info( file )
+   if isinstance( description, Device ):
+      pfw.console.debug.info( f"image has {len( description.partitions( ) )} partitions" )
+
+      loop_device = attach( file )
+      for index in range( 1, 1 + len( description.partitions( ) ) ):
+         mount( f"{loop_device}p{index}", mount_point = f"{kw_mount_point}/{index}" )
+
+      if kw_processor:
+         kw_processor( )
+
+      for index in range( 1, 1 + len( description.partitions( ) ) ):
+         # umount( f"{loop_device}p{index}" )
+         umount( f"{kw_mount_point}/{index}" )
+      detach( loop_device )
+
+   elif isinstance( description, Partition ):
+      pfw.console.debug.info( f"image has 1 partition" )
+
+      mount( file, mount_point = kw_mount_point )
+
+      if kw_processor:
+         kw_processor( )
+
+      umount( kw_mount_point )
+   else:
+      pfw.console.debug.error( "not an image file" )
+# def map
 
 def info( image_file: str ):
    result = pfw.shell.execute( f"parted {image_file} unit b print", sudo = True, output = pfw.shell.eOutput.PTY )
@@ -473,3 +504,22 @@ def init_device( file: str, device: Device, **kwargs ):
 
    return True
 # def init
+
+
+
+
+
+# Examples:
+
+# image_file = "/mnt/img/tmp/tmp.img"
+
+# pfw.linux.img.base.create( image_file, pfw.size.SizeGigabyte )
+# attached_to = pfw.linux.img.base.attach( image_file )
+# attached_to_test = pfw.linux.img.base.attached_to( image_file )
+# if attached_to != attached_to_test:
+#    pfw.console.debug.error( f"{attached_to} != {attached_to_test}" )
+# attached_to = pfw.linux.img.base.detach( attached_to )
+
+# image = pfw.linux.img.base.info( image_file )
+# image.info( )
+# pfw.linux.img.base.init_device( "/mnt/img/tmp/main.img", image )
