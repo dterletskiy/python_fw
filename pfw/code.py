@@ -2,7 +2,8 @@ import os
 import sys
 from enum import Enum
 
-import pfw.base
+import pfw.base.struct
+import pfw.base.net
 import pfw.console
 
 
@@ -27,7 +28,8 @@ class Version:
    # def __setattr__
 
    def __str__( self ):
-      attr_list = [ i for i in Version.__dict__.keys( ) if i[:2] != pfw.base.class_ignore_field ]
+      attr_list = [ i for i in Version.__dict__.keys( ) if i[:2] != pfw.base.struct.ignore_field
+ ]
       vector = [ ]
       for attr in attr_list:
          vector.append( str( attr ) + " = " + str( self.__dict__.get( attr ) ) )
@@ -90,7 +92,7 @@ types_map: dict = {
    }
 
 def type_builder( _type: str ):
-   type_list = pfw.base.multiple_split( str(_type), [ "<", ">", ",", " " ] )
+   type_list = pfw.base.str.multiple_split( str(_type), [ "<", ">", ",", " " ] )
 
    new_type: str = ""
    for type_item in type_list:
@@ -125,7 +127,8 @@ class Parameter:
    # def __setattr__
 
    def __str__( self ):
-      attr_list = [ i for i in Parameter.__dict__.keys( ) if i[:2] != pfw.base.class_ignore_field ]
+      attr_list = [ i for i in Parameter.__dict__.keys( ) if i[:2] != pfw.base.struct.ignore_field
+ ]
       vector = [ ]
       for attr in attr_list:
          vector.append( str( attr ) + " = " + str( self.__dict__.get( attr ) ) )
@@ -192,7 +195,8 @@ class Function:
    # def __setattr__
 
    def __str__( self ):
-      attr_list = [ i for i in Function.__dict__.keys( ) if i[:2] != pfw.base.class_ignore_field ]
+      attr_list = [ i for i in Function.__dict__.keys( ) if i[:2] != pfw.base.struct.ignore_field
+ ]
       vector = [ ]
       for attr in attr_list:
          vector.append( str( attr ) + " = " + str( self.__dict__.get( attr ) ) )
@@ -275,7 +279,8 @@ class Struct:
    # def __setattr__
 
    def __str__( self ):
-      attr_list = [ i for i in Struct.__dict__.keys( ) if i[:2] != pfw.base.class_ignore_field ]
+      attr_list = [ i for i in Struct.__dict__.keys( ) if i[:2] != pfw.base.struct.ignore_field
+ ]
       vector = [ ]
       for attr in attr_list:
          vector.append( str( attr ) + " = " + str( self.__dict__.get( attr ) ) )

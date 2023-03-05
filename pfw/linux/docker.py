@@ -1,7 +1,7 @@
 import os
 import re
 
-import pfw.base
+import pfw.base.struct
 import pfw.console
 
 
@@ -97,7 +97,8 @@ class Container:
       # def __setattr__
 
       def __str__( self ):
-         attr_list = [ i for i in Container.Mapping.__dict__.keys( ) if i[:2] != pfw.base.class_ignore_field ]
+         attr_list = [ i for i in Container.Mapping.__dict__.keys( ) if i[:2] != pfw.base.struct.ignore_field
+ ]
          vector = [ ]
          for attr in attr_list:
             vector.append( str( attr ) + " = " + str( self.__dict__.get( attr ) ) )
@@ -156,7 +157,8 @@ class Container:
    # def __setattr__
 
    def __str__( self ):
-      attr_list = [ i for i in Container.__dict__.keys( ) if i[:2] != pfw.base.class_ignore_field ]
+      attr_list = [ i for i in Container.__dict__.keys( ) if i[:2] != pfw.base.struct.ignore_field
+ ]
       vector = [ ]
       for attr in attr_list:
          vector.append( str( attr ) + " = " + str( self.__dict__.get( attr ) ) )

@@ -3,7 +3,7 @@ import copy
 import re
 import random
 
-import pfw.base
+import pfw.base.struct
 import pfw.console
 import pfw.shell
 import pfw.size
@@ -295,7 +295,8 @@ class Partition:
       # def __del__
 
       def __str__( self ):
-         attr_list = [ i for i in Partition.Description.__dict__.keys( ) if i[:2] != pfw.base.class_ignore_field ]
+         attr_list = [ i for i in Partition.Description.__dict__.keys( ) if i[:2] != pfw.base.struct.ignore_field
+ ]
          vector = [ ]
          for attr in attr_list:
             vector.append( str( attr ) + " = " + str( self.__dict__.get( attr ) ) )
@@ -422,7 +423,8 @@ class Partition:
    # def __setattr__
 
    def __str__( self ):
-      attr_list = [ i for i in Partition.__dict__.keys( ) if i[:2] != pfw.base.class_ignore_field ]
+      attr_list = [ i for i in Partition.__dict__.keys( ) if i[:2] != pfw.base.struct.ignore_field
+ ]
       vector = [ ]
       for attr in attr_list:
          vector.append( str( attr ) + " = " + str( self.__dict__.get( attr ) ) )
@@ -584,7 +586,8 @@ class Drive:
    # def __setattr__
 
    def __str__( self ):
-      attr_list = [ i for i in Drive.__dict__.keys( ) if i[:2] != pfw.base.class_ignore_field ]
+      attr_list = [ i for i in Drive.__dict__.keys( ) if i[:2] != pfw.base.struct.ignore_field
+ ]
       vector = [ ]
       for attr in attr_list:
          vector.append( str( attr ) + " = " + str( self.__dict__.get( attr ) ) )

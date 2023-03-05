@@ -1,7 +1,6 @@
 import beepy
 import re
 
-import pfw.base
 import pfw.console
 import pfw.shell
 

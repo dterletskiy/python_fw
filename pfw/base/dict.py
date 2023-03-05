@@ -1,6 +1,8 @@
 import functools
 import operator
 
+import pfw.console
+
 
 
 # Access nested dictionary items via a list of keys

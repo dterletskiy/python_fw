@@ -9,7 +9,6 @@ import pty
 import tty
 import termios
 
-import pfw.base
 import pfw.console
 import pfw.paf.common
 
