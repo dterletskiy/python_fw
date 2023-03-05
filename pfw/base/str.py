@@ -35,21 +35,32 @@ def multiple_split( string: str, separators: list ):
 
 
 
-def to_string( container, new_line = True ):
-   # if True == new_line: print( type( container ) )
+def to_string( container, **kwargs ):
+   kw_new_line = kwargs.get( "new_line", True )
+   kw_tabs = kwargs.get( "tabs", 3 )
+   kw_level = kwargs.get( "level", 0 )
+
+   splitter = " ,"
+
+   def tabulations( level ):
+      return kw_tabs * level * " "
+   # def tabulations
+
+   kwargs["level"] = kw_level + 1
 
    string: str = ""
-   if isinstance( container, dict: )
+   if isinstance( container, dict ):
       vector = [ ]
+      string += "\n" + tabulations( kw_level ) + "{\n"
       for key, value in container.items( ):
-         vector.append( f"{to_string( key, False )} -> {to_string( value, False )}" )
-      string = "{ " + ", ".join( vector ) + " }"
-   elif isinstance( container, list: )
-      vector = [ to_string( item, False ) for item in container ]
-      string = "[ " + ", ".join( vector ) + " ]"
-   elif isinstance( container, tuple: )
-      vector = [ to_string( item, False ) for item in container ]
-      string = "( " + ", ".join( vector ) + " )"
+         string += tabulations( kw_level + 1 ) + f"{to_string( key, **kwargs )} -> {to_string( value, **kwargs )}" + "\n"
+      string += tabulations( kw_level ) + "}"
+   elif isinstance( container, list ):
+      vector = [ to_string( item, **kwargs ) for item in container ]
+      string = "[ " + f"{splitter}".join( vector ) + " ]"
+   elif isinstance( container, tuple ):
+      vector = [ to_string( item, **kwargs ) for item in container ]
+      string = "( " + f"{splitter}".join( vector ) + " )"
    else:
       string = str( container )
 
