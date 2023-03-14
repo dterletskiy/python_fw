@@ -1,6 +1,7 @@
 import os
 import sys
 import subprocess
+import io
 import enum
 import select
 import signal
@@ -8,9 +9,70 @@ import errno
 import pty
 import tty
 import termios
+import fcntl
+import struct
 
 import pfw.console
-import pfw.paf.common
+
+
+
+def has_fileno( stream ):
+   """
+   Cleanly determine whether ``stream`` has a useful ``.fileno()``.
+   .. note::
+      This function helps determine if a given file-like object can be used
+      with various terminal-oriented modules and functions such as `select`,
+      `termios`, and `tty`. For most of those, a fileno is all that is
+      required; they'll function even if ``stream.isatty()`` is ``False``.
+      :param stream: A file-like object.
+      :returns:
+        ``True`` if ``stream.fileno()`` returns an integer, ``False`` otherwise
+        (this includes when ``stream`` lacks a ``fileno`` method).
+   .. versionadded:: 1.0
+   """
+   try:
+      return isinstance( stream.fileno( ), int )
+   except ( AttributeError, io.UnsupportedOperation ):
+      return False
+# def has_fileno
+
+def isatty( stream ) :
+   """
+   Cleanly determine whether ``stream`` is a TTY.
+   Specifically, first try calling ``stream.isatty()``, and if that fails
+   (e.g. due to lacking the method entirely) fallback to `os.isatty`.
+   .. note::
+      Most of the time, we don't actually care about true TTY-ness, but
+      merely whether the stream seems to have a fileno (per `has_fileno`).
+      However, in some cases (notably the use of `pty.fork` to present a
+      local pseudoterminal) we need to tell if a given stream has a valid
+      fileno but *isn't* tied to an actual terminal. Thus, this function.
+   :param stream: A file-like object.
+   :returns:
+      A boolean depending on the result of calling ``.isatty()`` and/or
+      `os.isatty`.
+   .. versionadded:: 1.0
+   """
+   # If there *is* an .isatty, ask it.
+   if hasattr( stream, "isatty" ) and callable( stream.isatty ):
+      return stream.isatty( )
+   # If there wasn't, see if it has a fileno, and if so, ask os.isatty
+   elif has_fileno( stream ):
+      return os.isatty( stream.fileno( ) )
+   # If we got here, none of the above worked, so it's reasonable to assume
+   # the darn thing isn't a real TTY.
+   return False
+# def isatty
+
+def get_terminal_dimensions( ):
+    if isatty( sys.stdout ):
+        s = struct.pack( 'HHHH', 0, 0, 0, 0 )
+        t = fcntl.ioctl( sys.stdout.fileno( ), termios.TIOCGWINSZ, s )
+        winsize = struct.unpack( 'hhhh', t )
+        return winsize[1], winsize[0]
+    else:
+        return None, None
+# def get_terminal_dimensions
 
 
 
@@ -35,6 +97,8 @@ class eOutput( enum.IntEnum ):
 #     chroot - use 'chroot' for execution with path mentioned in current parameter (default = None)
 #     chroot_bash - use 'chroot' for execution as shell command with path mentioned in current parameter (default = None)
 #     method - method what will be used for execution: 'system' or 'subprocess' (default = subprocess)
+#     print_command - print executed command in console (default = True)
+#     sudo - execute command with 'sudo' (default = False)
 def run_and_wait_with_status( command: str, *argv, **kwargs ):
    kw_args = kwargs.get( "args", [ ] )                                  # [ str ]
    kw_test = kwargs.get( "test", False )                                # bool
@@ -57,7 +121,7 @@ def run_and_wait_with_status( command: str, *argv, **kwargs ):
 
 
 
-   terminal_width, terminal_height = pfw.paf.common.get_terminal_dimensions( )
+   terminal_width, terminal_height = get_terminal_dimensions( )
    kw_env["COLUMNS"] = str( terminal_width )
    kw_env["LINES"] = str( terminal_height )
 
@@ -196,7 +260,7 @@ def run_and_wait_with_status( command: str, *argv, **kwargs ):
       if False == kw_collect and False == kw_print:
          process.wait( )
       else:
-         if pfw.paf.common.isatty( sys.stdin ):
+         if isatty( sys.stdin ):
             oldtty = termios.tcgetattr( sys.stdin )
             tty.setraw( sys.stdin.fileno( ) )
             tty.setcbreak( sys.stdin.fileno( ) )
@@ -285,7 +349,7 @@ def run_and_wait_with_status( command: str, *argv, **kwargs ):
                   break
 
 
-         if pfw.paf.common.isatty( sys.stdin ):
+         if isatty( sys.stdin ):
             termios.tcsetattr( sys.stdin, termios.TCSADRAIN, oldtty )
 
       signal.signal( signal.SIGWINCH, signal_winsize_handler_old )

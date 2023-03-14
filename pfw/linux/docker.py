@@ -89,7 +89,7 @@ class Container:
       # def __del__
 
       def __setattr__( self, attr, value ):
-         attr_list = [ i for i in Container.Mapping.__dict__.keys( ) ]
+         attr_list = [ i for i in self.__class__.__dict__.keys( ) ]
          if attr in attr_list:
             self.__dict__[ attr ] = value
             return
@@ -97,13 +97,9 @@ class Container:
       # def __setattr__
 
       def __str__( self ):
-         attr_list = [ i for i in Container.Mapping.__dict__.keys( ) if i[:2] != pfw.base.struct.ignore_field
- ]
-         vector = [ ]
-         for attr in attr_list:
-            vector.append( str( attr ) + " = " + str( self.__dict__.get( attr ) ) )
-         name = "Container.Mapping { " + ", ".join( vector ) + " }"
-         return name
+         attr_list = [ i for i in self.__class__.__dict__.keys( ) if i[:2] != pfw.base.struct.ignore_field ]
+         vector = [ f"{str( attr )} = {str( self.__dict__.get( attr ) )}" for attr in attr_list ]
+         return self.__class__.__name__ + " { " + ", ".join( vector ) + " }"
       # def __str__
 
       def host( self ):
@@ -149,7 +145,7 @@ class Container:
    # def __del__
 
    def __setattr__( self, attr, value ):
-      attr_list = [ i for i in Container.__dict__.keys( ) ]
+      attr_list = [ i for i in self.__class__.__dict__.keys( ) ]
       if attr in attr_list:
          self.__dict__[ attr ] = value
          return
@@ -157,13 +153,9 @@ class Container:
    # def __setattr__
 
    def __str__( self ):
-      attr_list = [ i for i in Container.__dict__.keys( ) if i[:2] != pfw.base.struct.ignore_field
- ]
-      vector = [ ]
-      for attr in attr_list:
-         vector.append( str( attr ) + " = " + str( self.__dict__.get( attr ) ) )
-      name = "Container { " + ", ".join( vector ) + " }"
-      return name
+      attr_list = [ i for i in self.__class__.__dict__.keys( ) if i[:2] != pfw.base.struct.ignore_field ]
+      vector = [ f"{str( attr )} = {str( self.__dict__.get( attr ) )}" for attr in attr_list ]
+      return self.__class__.__name__ + " { " + ", ".join( vector ) + " }"
    # def __str__
 
    def info( self, **kwargs ):

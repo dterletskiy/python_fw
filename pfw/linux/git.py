@@ -12,7 +12,27 @@ g_patterns: dict = {
    "git": r"^git@(.+):(.+)/(.+)\.git$"
 }
 
+def build_structire( url ):
+   for key in g_patterns:
+      pattern = g_patterns[ key ]
+      match = re.match( pattern, url )
+      if not match:
+         continue
+
+      remote = match.group( 1 )
+      user = match.group( 2 )
+      name = match.group( 3 )
+      return f"{remote}/{user}/{name}"
+# def build_structire
+
 class Repo:
+   class DirectoryError( Exception ):
+      def __init__( self, message ):
+         self.message = message
+
+      def __str__( self ):
+         return self.message
+
    def __init__( self, **kwargs ):
       kw_url = kwargs.get( "url", None )
       kw_branch = kwargs.get( "branch", None )
@@ -25,18 +45,9 @@ class Repo:
       self.__branch = kw_branch
       self.__depth = kw_depth
       self.__name = kw_name
+      self.__directory = os.path.join( kw_directory, build_structire( kw_url ) ) if kw_structure else kw_directory
 
-      self.__directory = kw_directory
-      if True == kw_structure:
-         for key in g_patterns:
-            pattern = g_patterns[ key ]
-            match = re.match( pattern, kw_url )
-            if match:
-               remote = match.group( 1 )
-               user = match.group( 2 )
-               name = match.group( 3 )
-               self.__directory = os.path.join( self.__directory, remote, user, name )
-               break
+      pfw.shell.execute( f"mkdir -p {self.__directory}", output = pfw.shell.eOutput.PTY )
    # def __init__
 
    def __del__( self ):
@@ -44,7 +55,7 @@ class Repo:
    # def __del__
 
    def __setattr__( self, attr, value ):
-      attr_list = [ i for i in Repo.__dict__.keys( ) ]
+      attr_list = [ i for i in self.__class__.__dict__.keys( ) ]
       if attr in attr_list:
          self.__dict__[ attr ] = value
          return
@@ -52,18 +63,15 @@ class Repo:
    # def __setattr__
 
    def __str__( self ):
-      attr_list = [ i for i in Repo.__dict__.keys( ) if i[:2] != pfw.base.struct.ignore_field
- ]
-      vector = [ ]
-      for attr in attr_list:
-         vector.append( str( attr ) + " = " + str( self.__dict__.get( attr ) ) )
-      name = "Repo { " + ", ".join( vector ) + " }"
-      return name
+      attr_list = [ i for i in self.__class__.__dict__.keys( ) if i[:2] != pfw.base.struct.ignore_field ]
+      vector = [ f"{str( attr )} = {str( self.__dict__.get( attr ) )}" for attr in attr_list ]
+      return self.__class__.__name__ + " { " + ", ".join( vector ) + " }"
    # def __str__
 
    def info( self, **kwargs ):
       tabulations: int = kwargs.get( "tabulations", 0 )
-      pfw.console.debug.info( self.__class__.__name__, ":", tabs = ( tabulations + 0 ) )
+      kw_msg = kwargs.get( "msg", "" )
+      pfw.console.debug.info( f"{kw_msg} (type {self.__class__.__name__}):", tabs = ( tabulations + 0 ) )
       pfw.console.debug.info( "url:          \'", self.__url, "\'", tabs = ( tabulations + 1 ) )
       pfw.console.debug.info( "branch:       \'", self.__branch, "\'", tabs = ( tabulations + 1 ) )
       pfw.console.debug.info( "depth:        \'", self.__depth, "\'", tabs = ( tabulations + 1 ) )
@@ -91,15 +99,39 @@ class Repo:
       return self.__name
    # def name
 
+   def is_repo( self, **kwargs ):
+      kw_directory: int = kwargs.get( "directory", self.__directory )
+
+      if not os.path.exists( kw_directory ):
+         return False
+      if not os.path.isdir( kw_directory ):
+         return False
+
+      # https://stackoverflow.com/a/16925062
+      command = f"git rev-parse --is-inside-work-tree"
+
+      return 0 == pfw.shell.execute( command, output = pfw.shell.eOutput.PTY, cwd = kw_directory )["code"]
+   # def is_repo
+
    def clone( self ):
+      if self.is_repo( directory = self.__directory ):
+         pfw.console.debug.error( f"directory '{self.__directory}' already contains git repository" )
+         return
+
       command = "git clone"
       command += f" --depth {self.__depth}" if None != self.__depth else ""
       command += f" --branch {self.__branch}" if None != self.__branch else ""
       command += f" {self.__url}"
       command += f" {self.__directory}"
 
-      pfw.shell.execute( command, output = pfw.shell.eOutput.PTY )
+      pfw.shell.execute( command, output = pfw.shell.eOutput.PTY, cwd = self.__directory )
    # def clone
+
+   def remove( self ):
+      command = f"rm -rf {self.__directory}"
+
+      pfw.shell.execute( command, output = pfw.shell.eOutput.PTY, cwd = self.__directory )
+   # def remove
 
    def pull( self ):
       command = "git pull"
@@ -161,7 +193,7 @@ class Collector:
    # def __del__
 
    def __setattr__( self, attr, value ):
-      attr_list = [ i for i in Collector.__dict__.keys( ) ]
+      attr_list = [ i for i in self.__class__.__dict__.keys( ) ]
       if attr in attr_list:
          self.__dict__[ attr ] = value
          return
@@ -169,13 +201,9 @@ class Collector:
    # def __setattr__
 
    def __str__( self ):
-      attr_list = [ i for i in Collector.__dict__.keys( ) if i[:2] != pfw.base.struct.ignore_field
- ]
-      vector = [ ]
-      for attr in attr_list:
-         vector.append( str( attr ) + " = " + str( self.__dict__.get( attr ) ) )
-      name = "Collector { " + ", ".join( vector ) + " }"
-      return name
+      attr_list = [ i for i in self.__class__.__dict__.keys( ) if i[:2] != pfw.base.struct.ignore_field ]
+      vector = [ f"{str( attr )} = {str( self.__dict__.get( attr ) )}" for attr in attr_list ]
+      return self.__class__.__name__ + " { " + ", ".join( vector ) + " }"
    # def __str__
 
    def info( self, **kwargs ):

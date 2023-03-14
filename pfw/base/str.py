@@ -50,17 +50,20 @@ def to_string( container, **kwargs ):
 
    string: str = ""
    if isinstance( container, dict ):
-      vector = [ ]
       string += "\n" + tabulations( kw_level ) + "{\n"
       for key, value in container.items( ):
-         string += tabulations( kw_level + 1 ) + f"{to_string( key, **kwargs )} -> {to_string( value, **kwargs )}" + "\n"
+         string += tabulations( kw_level + 1 ) + f"{to_string( key, **kwargs )} -> {to_string( value, **kwargs )}" + ",\n"
       string += tabulations( kw_level ) + "}"
    elif isinstance( container, list ):
-      vector = [ to_string( item, **kwargs ) for item in container ]
-      string = "[ " + f"{splitter}".join( vector ) + " ]"
+      string += "\n" + tabulations( kw_level ) + "[\n"
+      for item in container:
+         string += tabulations( kw_level + 1 ) + f"{to_string( item, **kwargs )}" + ",\n"
+      string += tabulations( kw_level ) + "]"
    elif isinstance( container, tuple ):
-      vector = [ to_string( item, **kwargs ) for item in container ]
-      string = "( " + f"{splitter}".join( vector ) + " )"
+      string += "\n" + tabulations( kw_level ) + "(n"
+      for item in container:
+         string += tabulations( kw_level + 1 ) + f"{to_string( item, **kwargs )}" + ",\n"
+      string += tabulations( kw_level ) + ")"
    else:
       string = str( container )
 
