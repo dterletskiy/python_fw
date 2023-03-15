@@ -107,6 +107,9 @@ class Repo:
       if not os.path.isdir( kw_directory ):
          return False
 
+      if not os.path.exists( os.path.join( kw_directory, ".git" ) ):
+         return False
+
       # https://stackoverflow.com/a/16925062
       command = f"git rev-parse --is-inside-work-tree"
 
