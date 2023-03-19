@@ -65,12 +65,14 @@ def build( **kwargs ):
    kw_build_args = kwargs.get( "build_args", [ ] )
 
    command: str = "docker build"
-   command += " --no-cache=True"
+   command += f" --no-cache=True"
+   command += f" --progress=plain"
    command += f" --file {kw_dokerfile}" if kw_dokerfile else ""
    command += f" --tag {kw_image_name}" if kw_image_name else ""
    command += f":{kw_image_tag}" if kw_image_name and kw_image_tag else ""
    for build_arg in kw_build_args:
       command += f" --build-arg {build_arg}" if build_arg else ""
+   command += f" ."
    pfw.shell.execute( command, output = pfw.shell.eOutput.PTY )
 # def build
 
@@ -121,7 +123,7 @@ class Container:
    def __init__( self, **kwargs ):
       kw_name = kwargs.get( "name", None )
       kw_image = kwargs.get( "image", None )
-      kw_hostname = kwargs.get( "hostname", None )
+      kw_hostname = kwargs.get( "hostname", "hostname" )
       kw_volume_mapping = kwargs.get( "volume_mapping", [ ] )
       kw_port_mapping = kwargs.get( "port_mapping", [ ] )
       kw_memory = kwargs.get( "memory", 4*1024*1024*1024 )
@@ -208,7 +210,7 @@ class Container:
       return 0 == result["code"]
    # def create
 
-   def run( self ):
+   def run( self, **kwargs ):
       kw_daemon = kwargs.get( "daemon", False )
       kw_disposable = kwargs.get( "disposable", False )
 
