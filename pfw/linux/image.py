@@ -522,13 +522,13 @@ def init_device( file: str, device: Device, **kwargs ):
 
 # image_file = "/mnt/img/tmp/tmp.img"
 
-# pfw.linux.img.base.create( image_file, pfw.size.SizeGigabyte )
-# attached_to = pfw.linux.img.base.attach( image_file )
-# attached_to_test = pfw.linux.img.base.attached_to( image_file )
+# pfw.linux.image.create( image_file, pfw.size.SizeGigabyte )
+# attached_to = pfw.linux.image.attach( image_file )
+# attached_to_test = pfw.linux.image.attached_to( image_file )
 # if attached_to != attached_to_test:
 #    pfw.console.debug.error( f"{attached_to} != {attached_to_test}" )
-# attached_to = pfw.linux.img.base.detach( attached_to )
+# attached_to = pfw.linux.image.detach( attached_to )
 
-# image = pfw.linux.img.base.info( image_file )
+# image = pfw.linux.image.info( image_file )
 # image.info( )
-# pfw.linux.img.base.init_device( "/mnt/img/tmp/main.img", image )
+# pfw.linux.image.init_device( "/mnt/img/tmp/main.img", image )
