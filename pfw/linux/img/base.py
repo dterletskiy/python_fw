@@ -8,6 +8,7 @@ import pfw.base.struct
 import pfw.console
 import pfw.shell
 import pfw.size
+import pfw.file
 import pfw.linux.file
 import pfw.linux.fs
 
@@ -46,7 +47,7 @@ class Partition:
       if kw_start_end_size and kw_clone_from_size:
          if kw_start_end_size < kw_clone_from_size:
             pfw.console.debug.error( "size mismatch between clone size file and end-start positions" )
-            partition_size = kw_start_end_size
+         partition_size = pfw.size.max( kw_start_end_size, kw_clone_from_size )
       elif kw_start_end_size:
          partition_size = kw_start_end_size
       elif kw_clone_from_size:
@@ -59,9 +60,11 @@ class Partition:
       self.__size = partition_size
       self.__start = kw_start
       self.__end = kw_end
-      self.__fs = kw_fs
-      self.__label = kw_label
       self.__bootable = kw_bootable
+      self.__clone_from = kw_clone_from
+      if not kw_clone_from:
+         self.__fs = kw_fs
+         self.__label = kw_label
    # def __init__
 
    def __del__( self ):
@@ -69,7 +72,7 @@ class Partition:
    # def __del__
 
    def __setattr__( self, attr, value ):
-      attr_list = [ i for i in Partition.__dict__.keys( ) ]
+      attr_list = [ i for i in self.__class__.__dict__.keys( ) ]
       if attr in attr_list:
          self.__dict__[ attr ] = value
          return
@@ -77,13 +80,9 @@ class Partition:
    # def __setattr__
 
    def __str__( self ):
-      attr_list = [ i for i in Partition.__dict__.keys( ) if i[:2] != pfw.base.struct.ignore_field
- ]
-      vector = [ ]
-      for attr in attr_list:
-         vector.append( str( attr ) + " = " + str( self.__dict__.get( attr ) ) )
-      name = "Partition { " + ", ".join( vector ) + " }"
-      return name
+      attr_list = [ i for i in self.__class__.__dict__.keys( ) if i[:2] != pfw.base.struct.ignore_field ]
+      vector = [ f"{str( attr )} = {str( self.__dict__.get( attr ) )}" for attr in attr_list ]
+      return self.__class__.__name__ + " { " + ", ".join( vector ) + " }"
    # def __str__
 
    def info( self, **kwargs ):
@@ -136,6 +135,10 @@ class Partition:
       self.__bootable = False
    # def bootable
 
+   def clone_from( self ):
+      return self.__clone_from
+   # def clone_from
+
 
 
    __size: pfw.size.Size = None
@@ -144,6 +147,7 @@ class Partition:
    __fs: pfw.linux.fs.FileSystem = None
    __label: str = None
    __bootable: bool = False
+   __clone_from: str = None
 # class Partition
 
 
@@ -182,7 +186,8 @@ class Device:
                size = partition.size( ),
                fs = partition.fs( ),
                label = partition.label( ),
-               bootable = partition.bootable( )
+               bootable = partition.bootable( ),
+               clone_from = partition.clone_from( )
             )
          )
    # def __init__
@@ -192,7 +197,7 @@ class Device:
    # def __del__
 
    def __setattr__( self, attr, value ):
-      attr_list = [ i for i in Device.__dict__.keys( ) ]
+      attr_list = [ i for i in self.__class__.__dict__.keys( ) ]
       if attr in attr_list:
          self.__dict__[ attr ] = value
          return
@@ -200,13 +205,9 @@ class Device:
    # def __setattr__
 
    def __str__( self ):
-      attr_list = [ i for i in Device.__dict__.keys( ) if i[:2] != pfw.base.struct.ignore_field
- ]
-      vector = [ ]
-      for attr in attr_list:
-         vector.append( str( attr ) + " = " + str( self.__dict__.get( attr ) ) )
-      name = "Device { " + ", ".join( vector ) + " }"
-      return name
+      attr_list = [ i for i in self.__class__.__dict__.keys( ) if i[:2] != pfw.base.struct.ignore_field ]
+      vector = [ f"{str( attr )} = {str( self.__dict__.get( attr ) )}" for attr in attr_list ]
+      return self.__class__.__name__ + " { " + ", ".join( vector ) + " }"
    # def __str__
 
    def info( self, **kwargs ):
@@ -241,7 +242,7 @@ class Device:
 
 
 
-def create( file: str, size: pfw.size.Size ):
+def create( file: str, size: pfw.size.Size, **kwargs ):
    file = file if file else tempfile.mkstemp( suffix = ".img" )[1]
 
    size_count = size.count( )
@@ -252,7 +253,9 @@ def create( file: str, size: pfw.size.Size ):
    return file
 # def create
 
-def format( file_name: str, file_system: pfw.linux.fs.FileSystem ):
+def format( file_name: str, file_system: pfw.linux.fs.FileSystem, **kwargs ):
+   kw_label = kwargs.get( "label", None )
+
    if None == file_system:
       pfw.console.debug.error( "filesystem is not defined" )
       return False
@@ -261,7 +264,7 @@ def format( file_name: str, file_system: pfw.linux.fs.FileSystem ):
       pfw.console.debug.error( "'%s' does not exist" % file_name )
       return False
 
-   return file_system.format( file_name )
+   return file_system.format( file_name, label = kw_label )
 # def format
 
 def mount( image_file: str, **kwargs ):
@@ -286,7 +289,7 @@ def mount( image_file: str, **kwargs ):
    return kw_mount_point
 # def mount
 
-def umount( file: str ):
+def umount( file: str, **kwargs ):
    if None == file:
       pfw.console.debug.warning( "Mountpoint (or image file) is not defined" )
       return False
@@ -299,7 +302,7 @@ def umount( file: str ):
    return True
 # def umount
 
-def mounted_to( file: str ):
+def mounted_to( file: str, **kwargs ):
    result = pfw.shell.execute( f"mount | grep {file}", sudo = True, output = pfw.shell.eOutput.PTY )
 
    if 0 != result["code"]:
@@ -314,7 +317,7 @@ def mounted_to( file: str ):
    return None
 # def mounted_to
 
-def attach( file: str ):
+def attach( file: str, **kwargs ):
    result = pfw.shell.execute( f"losetup --find --show --partscan {file}", sudo = True, output = pfw.shell.eOutput.PTY )
    if 0 != result["code"]:
       pfw.console.debug.error( "attach file '%s' error: '%s'" % ( file, result["code"] ) )
@@ -325,7 +328,7 @@ def attach( file: str ):
    return loop_device
 # def attach
 
-def detach( loop_device: str ):
+def detach( loop_device: str, **kwargs ):
    result_code = pfw.shell.execute( f"losetup --detach {loop_device}", sudo = True, output = pfw.shell.eOutput.PTY )["code"]
    if 0 != result_code:
       pfw.console.debug.error( "detach device '%s' error: '%s'" % ( loop_device, result_code ) )
@@ -335,7 +338,7 @@ def detach( loop_device: str ):
    return True
 # def detach
 
-def attached_to( file: str ):
+def attached_to( file: str, **kwargs ):
    result = pfw.shell.execute( f"losetup --list | grep {file}", sudo = True, output = pfw.shell.eOutput.PTY )
 
    if 0 != result["code"]:
@@ -360,10 +363,11 @@ def map( file: str, **kwargs ):
 
       loop_device = attach( file )
       for index in range( 1, 1 + len( description.partitions( ) ) ):
-         mount( f"{loop_device}p{index}", mount_point = f"{kw_mount_point}/{index}" )
+         mp = mount( f"{loop_device}p{index}", mount_point = f"{kw_mount_point}/{index}" )
+         pfw.console.debug.info( f"{loop_device}p{index} -> {mp}" )
 
       if kw_processor:
-         kw_processor( )
+         kw_processor( mount_point = kw_mount_point )
 
       for index in range( 1, 1 + len( description.partitions( ) ) ):
          # umount( f"{loop_device}p{index}" )
@@ -376,14 +380,14 @@ def map( file: str, **kwargs ):
       mount( file, mount_point = kw_mount_point )
 
       if kw_processor:
-         kw_processor( )
+         kw_processor( mount_point = kw_mount_point )
 
       umount( kw_mount_point )
    else:
       pfw.console.debug.error( "not an image file" )
 # def map
 
-def info( image_file: str ):
+def info( image_file: str, **kwargs ):
    result = pfw.shell.execute( f"parted {image_file} unit b print", sudo = True, output = pfw.shell.eOutput.PTY )
 
    # https://unix.stackexchange.com/a/438308
@@ -484,14 +488,14 @@ def init_device( file: str, device: Device, **kwargs ):
    def mkpart( loop_device: str, partition: Partition ):
       label: str = partition.label( ) if partition.label( ) else "none"
       fs: str = partition.fs( ).name( ) if partition.fs( ) else ""
-      start_sector: int = partition.start( ).sectors( result = 'quotient' )
-      end_sector: int = partition.end( ).sectors( result = 'quotient' )
+      start: int = partition.start( ).sectors( result = 'quotient' )
+      end: int = partition.end( ).sectors( result = 'quotient' )
 
-      pfw.shell.execute( f"parted {loop_device} -s mkpart {label} {fs} {start_sector}s {end_sector}s", sudo = True )
+      pfw.shell.execute( f"parted {loop_device} -s mkpart {label} {fs} {start}s {end}s", sudo = True )
    # def mkpart
 
    pfw.shell.execute( f"parted {loop_device} -s mklabel gpt", sudo = True )
-   for index, partition in enumerate(device.partitions( )):
+   for index, partition in enumerate( device.partitions( ) ):
       mkpart( loop_device, partition )
 
       if partition.bootable( ):
@@ -500,6 +504,9 @@ def init_device( file: str, device: Device, **kwargs ):
       # pfw.shell.execute( f"parted {loop_device} print {index + 1}", sudo = True )
       pfw.shell.execute( f"parted {loop_device} -s print unit s", sudo = True )
       # pfw.shell.execute( f"partprobe {loop_device}", sudo = True )
+
+      if partition.clone_from( ):
+         pfw.shell.execute( f"dd if={partition.clone_from( )} of={loop_device}p{index + 1} bs=1M status=none", sudo = True )
 
    if must_be_detached:
       detach( loop_device )

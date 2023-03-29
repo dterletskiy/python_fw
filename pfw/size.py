@@ -179,6 +179,26 @@ SizeSector     = Size( 1, Size.eGran.S )
 
 
 
+# Converting test size dimention reprsentation to corresponding Size.eGran value
+def text_to_size( text: str, **kwargs ):
+   text_to_gran = {
+      "B": pfw.size.Size.eGran.B,
+      "KB": pfw.size.Size.eGran.K,
+      "MB": pfw.size.Size.eGran.M,
+      "GB": pfw.size.Size.eGran.G,
+   }
+
+   kw_dimentions = kwargs.get( "dimentions", text_to_gran )
+
+   if text not in kw_dimentions:
+      pfw.console.debug.error( f"'{text}' does not match any dimension pattern" )
+      pfw.console.debug.error( f"next dimention patterns are supported: {kw_dimentions.keys( )}" )
+      return None
+
+   return kw_dimentions[ text ]
+# def text_to_size
+
+
 def min( *argv ):
    min_value: Size = argv[0]
 

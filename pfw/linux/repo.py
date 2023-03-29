@@ -68,6 +68,10 @@ class Repo:
       pfw.shell.execute( f"git --git-dir {manifest_git_path} log default" )
       pfw.shell.execute( f"git --git-dir {manifest_git_path} tag" )
       pfw.shell.execute( f"git --git-dir {manifest_git_path} branch -a" )
+
+      command: str = f"{self.__tool} --trace --time forall"
+      command += " -c \"git rev-parse --show-toplevel && git rev-parse HEAD\""
+      pfw.shell.execute( command, cwd = self.__source_dir, output = pfw.shell.eOutput.PTY )
    # def info
 
    def install( self ):

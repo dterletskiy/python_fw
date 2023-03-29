@@ -33,20 +33,6 @@ class eName( enum.Enum ):
    exfat = "exfat"
 # class eGran
 
-FILE_SYSTEMS: dict = {
-   eFamily.ext : [
-         eName.ext2,
-         eName.ext3,
-         eName.ext4,
-      ],
-   eFamily.fat : [
-         eName.fat12,
-         eName.fat16,
-         eName.fat32,
-         eName.exfat,
-      ],
-}
-
 
 
 class FileSystem:
@@ -54,7 +40,6 @@ class FileSystem:
       self.__family = kwargs.get( "family", None )
       self.__name = kwargs.get( "name", None )
       self.__tool = kwargs.get( "tool", None )
-      self.__option = kwargs.get( "option", None )
    # def __init__
 
    def __del__( self ):
@@ -62,7 +47,7 @@ class FileSystem:
    # def __del__
 
    def __setattr__( self, attr, value ):
-      attr_list = [ i for i in FileSystem.__dict__.keys( ) ]
+      attr_list = [ i for i in self.__class__.__dict__.keys( ) ]
       if attr in attr_list:
          self.__dict__[ attr ] = value
          return
@@ -70,13 +55,9 @@ class FileSystem:
    # def __setattr__
 
    def __str__( self ):
-      attr_list = [ i for i in FileSystem.__dict__.keys( ) if i[:2] != pfw.base.struct.ignore_field
- ]
-      vector = [ ]
-      for attr in attr_list:
-         vector.append( str( attr ) + " = " + str( self.__dict__.get( attr ) ) )
-      name = "FileSystem { " + ", ".join( vector ) + " }"
-      return name
+      attr_list = [ i for i in self.__class__.__dict__.keys( ) if i[:2] != pfw.base.struct.ignore_field ]
+      vector = [ f"{str( attr )} = {str( self.__dict__.get( attr ) )}" for attr in attr_list ]
+      return self.__class__.__name__ + " { " + ", ".join( vector ) + " }"
    # def __str__
 
    def info( self, **kwargs ):
@@ -87,12 +68,27 @@ class FileSystem:
       pfw.console.debug.info( f"family: '{self.__family}'", tabs = ( kw_tabulations + 1 ) )
       pfw.console.debug.info( f"name: '{self.__name}'", tabs = ( kw_tabulations + 1 ) )
       pfw.console.debug.info( f"tool: '{self.__tool}'", tabs = ( kw_tabulations + 1 ) )
-      pfw.console.debug.info( f"option: '{self.__option}'", tabs = ( kw_tabulations + 1 ) )
 
    # def info
 
    def format( self, device: str, **kwargs ):
-      command: str = f"{self.__family} {self.__option} {device}"
+      kw_label = kwargs.get( "label", "NoLabel" )
+
+      command: str = f"{self.__tool}"
+
+      if eFamily.ext == self.__family:
+         command += f" -L {kw_label}"
+      elif eFamily.fat == self.__family:
+         command += f" -n {kw_label}"
+         if eName.fat12 == self.__name:
+            command += f" -F 12"
+         elif eName.fat16 == self.__name:
+            command += f" -F 16"
+         elif eName.fat32 == self.__name:
+            command += f" -F 32"
+
+      command += f" {device}"
+
       return 0 == pfw.shell.execute( command, sudo = True, output = pfw.shell.eOutput.PTY )["code"]
    # def format
 
@@ -111,7 +107,6 @@ class FileSystem:
    __family: eFamily = None
    __name: eName = None
    __tool: str = None
-   __option: str = None
 # class FileSystem
 
 
@@ -121,49 +116,42 @@ ext2: FileSystem = FileSystem(
       family = eFamily.ext,
       name = eName.ext2,
       tool = "mkfs.ext2",
-      option = "-V",
    )
 
 ext3: FileSystem = FileSystem(
       family = eFamily.ext,
       name = eName.ext3,
       tool = "mkfs.ext3",
-      option = "-V",
    )
 
 ext4: FileSystem = FileSystem(
       family = eFamily.ext,
       name = eName.ext4,
       tool = "mkfs.ext4",
-      option = "-V",
    )
 
 fat12: FileSystem = FileSystem(
       family = eFamily.fat,
       name = eName.fat12,
       tool = "mkfs.fat",
-      option = "-V -F 12",
    )
 
 fat16: FileSystem = FileSystem(
       family = eFamily.fat,
       name = eName.fat16,
       tool = "mkfs.fat",
-      option = "-V -F 16",
    )
 
 fat32: FileSystem = FileSystem(
       family = eFamily.fat,
       name = eName.fat32,
       tool = "mkfs.fat",
-      option = "-V -F 32",
    )
 
 exfat: FileSystem = FileSystem(
       family = eFamily.fat,
       name = eName.exfat,
       tool = "mkfs.exfat",
-      option = "-V",
    )
 
 
