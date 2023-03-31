@@ -218,6 +218,10 @@ class Container:
          return False
 
       command: str = f"docker run --name {self.__name} --hostname {self.__hostname} -it"
+      # Fix terminal's window size in container
+      # https://stackoverflow.com/a/50617797
+      # https://github.com/moby/moby/issues/33794#issuecomment-312873988
+      command += " -e COLUMNS=\"`tput cols`\" -e LINES=\"`tput lines`\""
       command += " -d" if kw_daemon else ""
       command += " --rm" if kw_disposable else ""
       for item in self.__volume_mapping:
@@ -247,7 +251,12 @@ class Container:
    # def remove
 
    def exec( self, cmd: str ):
-      command: str = f"docker exec -it {self.__name} {cmd}"
+      command: str = f"docker exec -it {self.__name}"
+      # Fix terminal's window size in container
+      # https://stackoverflow.com/a/50617797
+      # https://github.com/moby/moby/issues/33794#issuecomment-312873988
+      command += " -e COLUMNS=\"`tput cols`\" -e LINES=\"`tput lines`\""
+      command += f" {cmd}"
       return pfw.shell.execute( command, output = pfw.shell.eOutput.PTY )
    # def exec
 
