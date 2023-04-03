@@ -194,11 +194,17 @@ class Container:
       return 0 == result["code"]
    # def pull
 
-   def create( self ):
+   def create( self, **kwargs ):
+      kw_disposable = kwargs.get( "disposable", False )
+
       if None != self.is_exists( ):
          return False
 
       command: str = f"docker create --name {self.__name} --hostname {self.__hostname} -it"
+      # Fix terminal's window size in container
+      # https://stackoverflow.com/a/50617797
+      # https://github.com/moby/moby/issues/33794#issuecomment-312873988
+      command += " -e COLUMNS=\"`tput cols`\" -e LINES=\"`tput lines`\""
       for item in self.__volume_mapping:
          command += f" -v {item.host( )}:{item.guest( )}"
          pfw.shell.execute( f"mkdir -p {item.host( )}" )
@@ -255,7 +261,7 @@ class Container:
       # Fix terminal's window size in container
       # https://stackoverflow.com/a/50617797
       # https://github.com/moby/moby/issues/33794#issuecomment-312873988
-      command += " -e COLUMNS=\"`tput cols`\" -e LINES=\"`tput lines`\""
+      # command += " -e COLUMNS=\"`tput cols`\" -e LINES=\"`tput lines`\""
       command += f" {cmd}"
       return pfw.shell.execute( command, output = pfw.shell.eOutput.PTY )
    # def exec
