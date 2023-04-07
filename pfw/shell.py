@@ -99,6 +99,8 @@ class eOutput( enum.IntEnum ):
 #     method - method what will be used for execution: 'system' or 'subprocess' (default = subprocess)
 #     print_command - print executed command in console (default = True)
 #     sudo - execute command with 'sudo' (default = False)
+#     test - boolean parameter that indicates that final command must not be executed.
+#        As the result will be returned dict { code: 255, output: command }, where command is the final shell command what could be executed.
 def run_and_wait_with_status( command: str, *argv, **kwargs ):
    kw_args = kwargs.get( "args", [ ] )                                  # [ str ]
    kw_test = kwargs.get( "test", False )                                # bool
@@ -213,13 +215,14 @@ def run_and_wait_with_status( command: str, *argv, **kwargs ):
          string = f"[cd {kw_cwd};] {string}"
 
       pfw.console.debug.header( f"{string}" )
+      return string
    # def print_command
 
    command_line = command_builder( command, kw_args, *argv, sudo = kw_sudo, string = kw_shell, chroot_bash = kw_chroot_bash, chroot = kw_chroot )
-   print_command( command_line, enable = kw_print_command )
+   command_line_string = print_command( command_line, enable = kw_print_command )
 
    if True == kw_test:
-      return { "code": 255, "output": "this is test" }
+      return { "code": 255, "output": command_line_string }
 
 
 
