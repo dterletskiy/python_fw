@@ -22,7 +22,7 @@ def build_structire( url ):
       remote = match.group( 1 )
       user = match.group( 2 )
       name = match.group( 3 )
-      return f"{remote}/{user}/{name}"
+      return [ remote, user, name ]
 # def build_structire
 
 class Repo:
@@ -45,7 +45,7 @@ class Repo:
       self.__branch = kw_branch
       self.__depth = kw_depth
       self.__name = kw_name
-      self.__directory = os.path.join( kw_directory, build_structire( kw_url ) ) if kw_structure else kw_directory
+      self.__directory = os.path.join( kw_directory, "/".join( build_structire( kw_url ) ) ) if kw_structure else kw_directory
 
       pfw.shell.execute( f"mkdir -p {self.__directory}", output = pfw.shell.eOutput.PTY )
    # def __init__

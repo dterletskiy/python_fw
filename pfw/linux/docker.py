@@ -76,6 +76,15 @@ def build( **kwargs ):
    pfw.shell.execute( command, output = pfw.shell.eOutput.PTY )
 # def build
 
+def rmi( *kwargs ):
+   kw_image_name = kwargs.get( "image_name", None )
+   kw_image_tag = kwargs.get( "image_tag", None )
+
+   command: str = "docker build"
+   command += f"{kw_image_name}"
+   command += f":{kw_image_tag}" if kw_image_name and kw_image_tag else ""
+# def rmi
+
 
 
 class Container:

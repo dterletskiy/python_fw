@@ -12,22 +12,29 @@ def get_value_by_list_of_keys( dictionary: dict, keys_list: list, **kwargs ):
    if not isinstance( keys_list, list ) and not isinstance( keys_list, tuple ):
       return None
 
-   return functools.reduce( operator.getitem, keys_list, dictionary )
+   try:
+      return functools.reduce( operator.getitem, keys_list, dictionary )
+   except:
+      pfw.console.debug.error( "no such keys combination" )
+      return None
 # def get_value_by_list_of_keys
 
 def set_value_by_list_of_keys( dictionary: dict, keys_list: list, value, **kwargs ):
    if not isinstance( keys_list, list ) and not isinstance( keys_list, tuple ):
       return
 
-   get_value_by_list_of_keys( dictionary, keys_list[:-1] )[ keys_list[-1] ] = value
+   try:
+      get_value_by_list_of_keys( dictionary, keys_list[:-1] )[ keys_list[-1] ] = value
+   except:
+      pfw.console.debug.error( "no such keys combination" )
 # sef set_value_by_list_of_keys
 
 
 
-
+DEFAULT_DELIMITER: str = "."
 
 def get_value_by_str( dictionary: dict, keys_str: str, **kwargs ):
-   kw_delimiter: int = kwargs.get( "delimiter", "." )
+   kw_delimiter: int = kwargs.get( "delimiter", DEFAULT_DELIMITER )
    if not isinstance( keys_str, str ):
       return None
 
@@ -36,13 +43,15 @@ def get_value_by_str( dictionary: dict, keys_str: str, **kwargs ):
 # def get_value_by_str
 
 def set_value_by_str( dictionary: dict, keys_str: str, value, **kwargs ):
-   kw_delimiter: int = kwargs.get( "delimiter", "." )
+   kw_delimiter: int = kwargs.get( "delimiter", DEFAULT_DELIMITER )
    if not isinstance( keys_str, str ):
       return
 
    keys_list: list = keys_str.split( kw_delimiter )
-   get_value_by_list_of_keys( dictionary, keys_list[:-1] )[ keys_list[-1] ] = value
+   set_value_by_list_of_keys( dictionary, keys_list, value, **kwargs )
 # sef set_value_by_str
+
+
 
 def get_value( dictionary: dict, keys: str, **kwargs ):
    if isinstance( keys, str ):

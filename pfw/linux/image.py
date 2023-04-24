@@ -507,12 +507,14 @@ def init_device( file: str, device: Device, **kwargs ):
 
       if partition.clone_from( ):
          pfw.shell.execute( f"dd if={partition.clone_from( )} of={loop_device}p{index + 1} bs=1M status=none", sudo = True )
+      elif partition.fs( ):
+         format( f"{loop_device}p{index + 1}", partition.fs( ), label = partition.label( ) )
 
    if must_be_detached:
       detach( loop_device )
 
    return True
-# def init
+# def init_device
 
 
 
