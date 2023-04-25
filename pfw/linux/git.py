@@ -7,14 +7,30 @@ import pfw.shell
 
 
 
-g_patterns: dict = {
+g_patterns_2: dict = {
+   "https": r"^https://(.+)/(.+)\.git$",
+   "git": r"^git://(.+)/(.+)\.git$",
+}
+
+g_patterns_3: dict = {
    "https": r"^https://(.+)/(.+)/(.+)\.git$",
    "git": r"^git@(.+):(.+)/(.+)\.git$"
 }
 
 def build_structire( url ):
-   for key in g_patterns:
-      pattern = g_patterns[ key ]
+   for key in g_patterns_2:
+      pattern = g_patterns_2[ key ]
+      match = re.match( pattern, url )
+      if not match:
+         continue
+
+      remote = match.group( 1 )
+      user = ""
+      name = match.group( 2 )
+      return [ remote, user, name ]
+
+   for key in g_patterns_3:
+      pattern = g_patterns_3[ key ]
       match = re.match( pattern, url )
       if not match:
          continue
