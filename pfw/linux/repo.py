@@ -75,8 +75,12 @@ class Repo:
    # def info
 
    def install( self ):
-      pfw.base.net.download( self.__tool_url, self.__source_dir )
-      pfw.shell.execute( f"chmod a+x {self.__tool}" )
+      result = pfw.base.net.download( self.__tool_url, self.__source_dir )
+      if 0 != result["code"]:
+         return False
+
+      result = pfw.shell.execute( f"chmod a+x {self.__tool}" )
+      return 0 == result["code"]
    # def install
 
    def init( self, **kwargs ):
@@ -86,9 +90,9 @@ class Repo:
       command += f" --manifest-branch={self.__manifest_branch}" if self.__manifest_branch else ""
       command += f" --manifest-depth={self.__manifest_depth}" if self.__manifest_depth else ""
       command += f" --depth={self.__depth}" if self.__depth else ""
-      result_code = pfw.shell.execute( command, cwd = self.__source_dir, output = pfw.shell.eOutput.PTY )["code"]
+      result = pfw.shell.execute( command, cwd = self.__source_dir, output = pfw.shell.eOutput.PTY )
 
-      return 0 == result_code
+      return 0 == result["code"]
    # def init
 
    def sync( self ):
@@ -96,24 +100,24 @@ class Repo:
       command += f" --current-branch"
       command += f" --no-clone-bundle"
       command += f" --no-tags"
-      result_code = pfw.shell.execute( command, cwd = self.__source_dir, output = pfw.shell.eOutput.PTY )["code"]
+      result = pfw.shell.execute( command, cwd = self.__source_dir, output = pfw.shell.eOutput.PTY )
 
-      return 0 == result_code
+      return 0 == result["code"]
    # def sync
 
    def status( self ):
       command: str = f"{self.__tool} --trace --time status"
-      result_code = pfw.shell.execute( command, cwd = self.__source_dir, output = pfw.shell.eOutput.PTY )["code"]
+      result = pfw.shell.execute( command, cwd = self.__source_dir, output = pfw.shell.eOutput.PTY )
 
-      return 0 == result_code
+      return 0 == result["code"]
    # def status
 
    def revert( self ):
       command: str = f"{self.__tool} --trace --time forall"
       command += f" -vc \"git reset --hard\""
-      result_code = pfw.shell.execute( command, cwd = self.__source_dir )["code"]
+      result = pfw.shell.execute( command, cwd = self.__source_dir )
 
-      return 0 == result_code
+      return 0 == result["code"]
    # def revert
 
 

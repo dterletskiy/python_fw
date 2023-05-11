@@ -129,13 +129,14 @@ class Repo:
       # https://stackoverflow.com/a/16925062
       command = f"git rev-parse --is-inside-work-tree"
 
-      return 0 == pfw.shell.execute( command, output = pfw.shell.eOutput.PTY, cwd = kw_directory )["code"]
+      result = pfw.shell.execute( command, output = pfw.shell.eOutput.PTY, cwd = kw_directory )
+      return 0 == result["code"]
    # def is_repo
 
    def clone( self ):
       if self.is_repo( directory = self.__directory ):
          pfw.console.debug.error( f"directory '{self.__directory}' already contains git repository" )
-         return
+         return False
 
       command = "git clone"
       command += f" --depth {self.__depth}" if None != self.__depth else ""
@@ -143,31 +144,36 @@ class Repo:
       command += f" {self.__url}"
       command += f" {self.__directory}"
 
-      pfw.shell.execute( command, output = pfw.shell.eOutput.PTY, cwd = self.__directory )
+      result = pfw.shell.execute( command, output = pfw.shell.eOutput.PTY, cwd = self.__directory )
+      return 0 == result["code"]
    # def clone
 
    def remove( self ):
       command = f"rm -rf {self.__directory}"
 
-      pfw.shell.execute( command, output = pfw.shell.eOutput.PTY, cwd = self.__directory )
+      result = pfw.shell.execute( command, output = pfw.shell.eOutput.PTY, cwd = self.__directory )
+      return 0 == result["code"]
    # def remove
 
    def pull( self ):
       command = "git pull"
 
-      pfw.shell.execute( command, output = pfw.shell.eOutput.PTY, cwd = self.__directory )
+      result = pfw.shell.execute( command, output = pfw.shell.eOutput.PTY, cwd = self.__directory )
+      return 0 == result["code"]
    # def pull
 
    def push( self ):
       command = "git push"
 
-      pfw.shell.execute( command, output = pfw.shell.eOutput.PTY, cwd = self.__directory )
+      result = pfw.shell.execute( command, output = pfw.shell.eOutput.PTY, cwd = self.__directory )
+      return 0 == result["code"]
    # def push
 
    def status( self ):
       command = "git status"
 
-      pfw.shell.execute( command, output = pfw.shell.eOutput.PTY, cwd = self.__directory )
+      result = pfw.shell.execute( command, output = pfw.shell.eOutput.PTY, cwd = self.__directory )
+      return 0 == result["code"]
    # def status
 
    def log( self ):
@@ -181,7 +187,8 @@ class Repo:
       command += f" --oneline {kw_oneline}" if None != kw_oneline else ""
       command += f" --stat {kw_stat}" if None != kw_stat else ""
 
-      pfw.shell.execute( command, output = pfw.shell.eOutput.PTY, cwd = self.__directory )
+      result = pfw.shell.execute( command, output = pfw.shell.eOutput.PTY, cwd = self.__directory )
+      return 0 == result["code"]
    # def log
 
    __url: str = None

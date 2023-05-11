@@ -243,6 +243,12 @@ class Device:
 
 
 def create( file: str, size: pfw.size.Size, **kwargs ):
+   kw_force = kwargs.get( "force", False )
+
+   if file and os.path.exists( file ) and False == kw_force:
+      pfw.console.debug.warning( f"file '{file}' already exists and 'force' flag set to 'false' => existing file will be used" )
+      return file
+
    file = file if file else tempfile.mkstemp( suffix = ".img" )[1]
 
    size_count = size.count( )

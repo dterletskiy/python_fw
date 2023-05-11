@@ -5,6 +5,12 @@ import pfw.shell
 
 
 
+def file_info( file: str ):
+   result = pfw.shell.execute( f"file {file}", sudo = sudo, output = pfw.shell.eOutput.PTY )
+   if 0 != result["code"]:
+      return None
+# def file_info
+
 def size( path: str, sudo: bool = False ):
    result = pfw.shell.execute( f"du -hsb {path}", sudo = sudo, output = pfw.shell.eOutput.PTY )
    if 0 != result["code"]:
@@ -43,7 +49,7 @@ def copy_file( source: str, destination: str, **kwargs ):
    if kw_force:
       pfw.shell.execute( f"mkdir -p {os.path.dirname( destination )}", output = pfw.shell.eOutput.PTY, sudo = kw_sudo )
 
-   command: str = "cp"
+   command: str = "cp -a -v"
    command += f" {source}"
    command += f" {destination}"
    return 0 == pfw.shell.execute( command, output = pfw.shell.eOutput.PTY, sudo = kw_sudo )["code"]
@@ -60,7 +66,7 @@ def copy_dir( source: str, destination: str, **kwargs ):
    if kw_force:
       pfw.shell.execute( f"mkdir -p {os.path.dirname( destination )}", output = pfw.shell.eOutput.PTY, sudo = kw_sudo )
 
-   command: str = "cp -R"
+   command: str = "cp -r -a -v"
    command += f" {source}"
    command += f" {destination}"
    return 0 == pfw.shell.execute( command, output = pfw.shell.eOutput.PTY, sudo = kw_sudo )["code"]
