@@ -139,9 +139,11 @@ class Container:
       kw_swap = kwargs.get( "swap", -1 )
       kw_cpus = kwargs.get( "cpus", None )
       kw_env = kwargs.get( "env", None )
+      kw_workdir = kwargs.get( "workdir", None )
 
       self.__name = kw_name
       self.__hostname = kw_hostname
+      self.__workdir = kw_workdir
       self.__image = kw_image
       self.__volume_mapping = kw_volume_mapping
       self.__port_mapping = kw_port_mapping
@@ -228,6 +230,7 @@ class Container:
    def run( self, **kwargs ):
       kw_daemon = kwargs.get( "daemon", False )
       kw_disposable = kwargs.get( "disposable", False )
+      kw_command = kwargs.get( "command", None )
 
       if None != self.is_exists( ):
          return False
@@ -237,14 +240,16 @@ class Container:
       # https://stackoverflow.com/a/50617797
       # https://github.com/moby/moby/issues/33794#issuecomment-312873988
       command += " -e COLUMNS=\"`tput cols`\" -e LINES=\"`tput lines`\""
-      command += " -d" if kw_daemon else ""
-      command += " --rm" if kw_disposable else ""
+      command += f" -d" if kw_daemon else ""
+      command += f" --rm" if kw_disposable else ""
+      command += f" -w {self.__workdir}" if self.__workdir else ""
       for item in self.__volume_mapping:
          command += f" -v {item.host( )}:{item.guest( )}"
-         pfw.shell.execute( f"mkdir -p {item.host( )}" )
+         # pfw.shell.execute( f"mkdir -p {item.host( )}" ) # @TDA: docker must create mapping directory on the host if it does not exist
       for item in self.__port_mapping:
          command += f" -p {item.host( )}:{item.guest( )}"
       command += f" {self.__image}"
+      command += f" {kw_command}" if kw_command else ""
       result = pfw.shell.execute( command, output = pfw.shell.eOutput.PTY )
 
       return 0 == result["code"]
@@ -317,4 +322,5 @@ class Container:
    __hostname: str = None
    __volume_mapping: list = None 
    __port_mapping: list = None 
+   __workdir: str = None
 # class Container
