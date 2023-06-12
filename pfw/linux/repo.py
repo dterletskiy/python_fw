@@ -76,7 +76,7 @@ class Repo:
 
    def install( self ):
       result = pfw.base.net.download( self.__tool_url, self.__source_dir )
-      if 0 != result["code"]:
+      if False == result:
          return False
 
       result = pfw.shell.execute( f"chmod a+x {self.__tool}" )
