@@ -5,30 +5,42 @@ import pfw.shell
 
 
 
-# env_set is { str: [ str ] }
-# env_overwrite is { str: [ str ] }
-# env_add is { str: [ str ] }
-def build( env_set = None, env_overwrite = None, env_add = None ):
+# env_set            is { str: [ str ] } or { str: str }
+# env_overwrite      is { str: [ str ] } or { str: str }
+# env_add            is { str: [ str ] } or { str: str }
+def build( **kwargs ):
+   kw_env_set = kwargs.get( "env_set", None )
+   kw_env_overwrite = kwargs.get( "env_overwrite", None )
+   kw_env_add = kwargs.get( "env_add", None )
+
    environment: dict = { }
 
-   if None != env_set:
-      for key in env_set:
-         if 0 != len( env_set[ key ] ):
-            environment[ key ] = ':'.join( str( item ) for item in env_set[ key ] )
+   if None != kw_env_set:
+      for name, values in kw_env_set.items( ):
+         if isinstance( values, list ) or isinstance( values, tuple ):
+            environment[ name ] = ':'.join( values )
+         elif isinstance( values, str ):
+            environment[ name ] = values
    else:
       environment = os.environ.copy( )
 
-   if None != env_overwrite:
-      for key in env_overwrite:
-         if 0 != len( env_overwrite[ key ] ):
-            environment[ key ] = ':'.join( str( item ) for item in env_overwrite[ key ] )
+   if None != kw_env_overwrite:
+      for name, values in kw_env_overwrite.items( ):
+         if isinstance( values, list ) or isinstance( values, tuple ):
+            environment[ name ] = ':'.join( values )
+         elif isinstance( values, str ):
+            environment[ name ] = values
 
-   if None != env_add:
-      for key in env_add:
-         values = environment.get( key, "" )
-         if 0 != len( env_add[ key ] ):
-            values = ':'.join( str( item ) for item in env_add[ key ] ) + ":" + values
-         environment[ key ] = values
+   if None != kw_env_add:
+      for name, values in kw_env_add.items( ):
+         v = environment[ name ] if name in environment else ""
+         if isinstance( values, list ) or isinstance( values, tuple ):
+            environment[ name ] = ':'.join( values )
+         elif isinstance( values, str ):
+            environment[ name ] = values
+
+         environment[ name ] += "" if 0 == len( environment[ name ] ) else ":"
+         environment[ name ] += v
 
    return environment
 # def build
