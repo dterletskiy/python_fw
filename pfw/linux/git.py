@@ -56,14 +56,12 @@ class Repo:
       kw_structure = kwargs.get( "structure", False ) # if this parameter is set to 'True' repo will be cloned to <directory>/<remote>/<user>/<name>
       kw_name = kwargs.get( "name", None )
       kw_depth = kwargs.get( "depth", None )
-      kw_submodules = kwargs.get( "submodules", False )
 
       self.__url = kw_url
       self.__branch = kw_branch
       self.__depth = kw_depth
       self.__name = kw_name
       self.__directory = os.path.join( kw_directory, "/".join( build_structire( kw_url ) ) ) if kw_structure else kw_directory
-      self.__submodules = kw_submodules
 
       pfw.shell.execute( f"mkdir -p {self.__directory}", output = pfw.shell.eOutput.PTY )
    # def __init__
@@ -141,27 +139,14 @@ class Repo:
          return False
 
       command = "git clone"
+      command += f" --recursive"
       command += f" --depth {self.__depth}" if None != self.__depth else ""
       command += f" --branch {self.__branch}" if None != self.__branch else ""
       command += f" {self.__url}"
       command += f" {self.__directory}"
 
       result = pfw.shell.execute( command, output = pfw.shell.eOutput.PTY, cwd = self.__directory )
-      if 0 != result["code"]:
-         return False
-
-      if True == self.__submodules:
-         command = "git submodule init"
-         result = pfw.shell.execute( command, output = pfw.shell.eOutput.PTY, cwd = self.__directory )
-         if 0 != result["code"]:
-            return False
-
-         command = "git submodule update"
-         result = pfw.shell.execute( command, output = pfw.shell.eOutput.PTY, cwd = self.__directory )
-         if 0 != result["code"]:
-            return False
-
-      return True
+      return 0 == result["code"]
    # def clone
 
    def remove( self ):
@@ -175,16 +160,7 @@ class Repo:
       command = "git pull"
 
       result = pfw.shell.execute( command, output = pfw.shell.eOutput.PTY, cwd = self.__directory )
-      if 0 != result["code"]:
-         return False
-
-      if True == self.__submodules:
-         command = "git submodule update"
-         result = pfw.shell.execute( command, output = pfw.shell.eOutput.PTY, cwd = self.__directory )
-         if 0 != result["code"]:
-            return False
-
-      return True
+      return 0 == result["code"]
    # def pull
 
    def push( self ):
