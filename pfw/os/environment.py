@@ -18,28 +18,27 @@ def build( **kwargs ):
    if None != kw_env_set:
       for name, values in kw_env_set.items( ):
          if isinstance( values, list ) or isinstance( values, tuple ):
-            environment[ name ] = ':'.join( values )
-         elif isinstance( values, str ):
-            environment[ name ] = values
+            values = ':'.join( values )
+
+         environment[ name ] = values
    else:
       environment = os.environ.copy( )
 
    if None != kw_env_overwrite:
       for name, values in kw_env_overwrite.items( ):
          if isinstance( values, list ) or isinstance( values, tuple ):
-            environment[ name ] = ':'.join( values )
-         elif isinstance( values, str ):
-            environment[ name ] = values
+            values = ':'.join( values )
+
+         environment[ name ] = values
 
    if None != kw_env_add:
       for name, values in kw_env_add.items( ):
-         v = environment[ name ] if name in environment else ""
          if isinstance( values, list ) or isinstance( values, tuple ):
-            environment[ name ] = ':'.join( values )
-         elif isinstance( values, str ):
-            environment[ name ] = values
+            values = ':'.join( values )
 
-         environment[ name ] += "" if 0 == len( environment[ name ] ) else ":"
+         v = environment.get( name, "" )
+         environment[ name ] = values
+         environment[ name ] += "" if 0 == len( values ) or 0 == len( v ) else ":"
          environment[ name ] += v
 
    return environment

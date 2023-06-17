@@ -137,6 +137,7 @@ def run_and_wait_with_status( command: str, *argv, **kwargs ):
 
 
 
+   kw_env = kw_env if kw_env else os.environ.copy( )
    terminal_width, terminal_height = get_terminal_dimensions( )
    kw_env["COLUMNS"] = str( terminal_width )
    kw_env["LINES"] = str( terminal_height )
