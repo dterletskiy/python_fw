@@ -18,9 +18,11 @@ def archive( dir_name: str, format: str = "zip" ):
       shutil.make_archive( output_filename, "xztar", dir_name )
    else:
       shutil.make_archive( output_filename, format, dir_name )
+   return True
 # def archive
 
 def extract( archive: str, format: str, to: str ):
    pfw.console.debug.info( "extracting '", archive, "' to '", to, "'" )
    shutil.unpack_archive( archive, to, format )
+   return True
 # def extract

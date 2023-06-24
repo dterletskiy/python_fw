@@ -8,11 +8,17 @@ import pfw.shell
 
 
 def pack( archive: str, format: str, *argv, **kwargs ):
-   return pack_tar( archive, format, *argv, **kwargs )
+   if format in tar_format_list:
+      return pack_tar( archive, format, *argv, **kwargs )
+   elif format in zip_format_list:
+      return pack_zip( archive, *argv, **kwargs )
 # def pack
 
-def unpack( archive: str, format: str, *argv, **kwargs ):
-   return unpack_tar( archive, format, *argv, **kwargs )
+def unpack( archive: str, to: str, format: str, *argv, **kwargs ):
+   if format in tar_format_list:
+      return unpack_tar( archive, to, format, *argv, **kwargs )
+   elif format in zip_format_list:
+      return unpack_zip( archive, to, *argv, **kwargs )
 # def unpack
 
 def detect_type( archive: str, **kwargs ):
@@ -75,3 +81,29 @@ def unpack_tar( archive: str, to: str, format: str, **kwargs ):
 
    return pfw.shell.execute( command, output = pfw.shell.eOutput.PTY, sudo = kw_sudo )["code"]
 # def unpack_tar
+
+
+
+zip_format_list: list = [ "zip" ]
+
+def pack_zip( archive: str, *argv, **kwargs ):
+   kw_sudo = kwargs.get( "sudo", False )
+   kw_directory = kwargs.get( "directory", None )
+
+   command = "zip -r"
+   command += f" {archive}"
+   command += " " + " ".join( list( argv ) )
+
+   return pfw.shell.execute( command, output = pfw.shell.eOutput.PTY, sudo = kw_sudo, cwd = kw_directory )["code"]
+# def pack_zip
+
+def unpack_zip( archive: str, to: str, **kwargs ):
+   kw_sudo = kwargs.get( "sudo", False )
+   kw_directory = kwargs.get( "directory", None )
+
+   command = "unzip"
+   command += f" {archive}"
+   command += f" -d {to}"
+
+   return pfw.shell.execute( command, output = pfw.shell.eOutput.PTY, sudo = kw_sudo, cwd = kw_directory )["code"]
+# def unpack_zip
