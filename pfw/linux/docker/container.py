@@ -4,6 +4,7 @@ import re
 import pfw.base.struct
 import pfw.console
 import pfw.shell
+import pfw.os.environment
 
 
 
@@ -38,6 +39,10 @@ class Mapping:
    def guest( self ):
       return self.__guest
    # def name
+
+   def as_string( self, delimiter = ":" ):
+      return f"{self.__host}{delimiter}{self.__guest}"
+   # def as_string
 
 
 
@@ -97,6 +102,7 @@ def create( container_name: str, image_name: str, **kwargs ):
    kw_workdir = kwargs.get( "workdir", None )
    kw_volume_mapping = kwargs.get( "volume_mapping", [ ] )
    kw_port_mapping = kwargs.get( "port_mapping", [ ] )
+   kw_env = kwargs.get( "env", [ ] )
    kw_disposable = kwargs.get( "disposable", False )
 
    if None != is_exists( container_name ):
@@ -107,16 +113,21 @@ def create( container_name: str, image_name: str, **kwargs ):
    command += f" --tty"
    command += f" --name {container_name}"
    command += f" --hostname {kw_hostname}"
+   command += f" --rm" if kw_disposable else ""
+   command += f" --workdir {kw_workdir}" if kw_workdir else ""
    # Fix terminal's window size in container
    # https://stackoverflow.com/a/50617797
    # https://github.com/moby/moby/issues/33794#issuecomment-312873988
    command += " --env COLUMNS=\"`tput cols`\" --env LINES=\"`tput lines`\""
-   command += f" --rm" if kw_disposable else ""
-   command += f" --workdir {kw_workdir}" if kw_workdir else ""
+   for env in kw_env:
+      if isinstance( env, pfw.os.environment.Environment ):
+         command += f" --env {env.as_string( )}"
    for item in kw_volume_mapping:
-      command += f" --volume {item.host( )}:{item.guest( )}"
+      if isinstance( item, Mapping ):
+         command += f" --volume {item.as_string( )}"
    for item in kw_port_mapping:
-      command += f" --publish {item.host( )}:{item.guest( )}"
+      if isinstance( item, Mapping ):
+         command += f" --publish {item.as_string( )}"
    command += f" {image_name}:{kw_image_tag}" if kw_image_tag else f" {image_name}"
    result = pfw.shell.execute( command, output = pfw.shell.eOutput.PTY )
 
@@ -156,6 +167,7 @@ def run( container_name: str, image_name: str, **kwargs ):
    kw_workdir = kwargs.get( "workdir", None )
    kw_volume_mapping = kwargs.get( "volume_mapping", [ ] )
    kw_port_mapping = kwargs.get( "port_mapping", [ ] )
+   kw_env = kwargs.get( "env", [ ] )
    kw_disposable = kwargs.get( "disposable", False )
    kw_daemon = kwargs.get( "daemon", False )
    kw_command = kwargs.get( "command", None )
@@ -168,16 +180,21 @@ def run( container_name: str, image_name: str, **kwargs ):
    command += f" --tty"
    command += f" --name {container_name}"
    command += f" --hostname {kw_hostname}"
+   command += f" --rm" if kw_disposable else ""
+   command += f" --workdir {kw_workdir}" if kw_workdir else ""
    # Fix terminal's window size in container
    # https://stackoverflow.com/a/50617797
    # https://github.com/moby/moby/issues/33794#issuecomment-312873988
    command += " --env COLUMNS=\"`tput cols`\" --env LINES=\"`tput lines`\""
-   command += f" --rm" if kw_disposable else ""
-   command += f" --workdir {kw_workdir}" if kw_workdir else ""
+   for env in kw_env:
+      if isinstance( env, pfw.os.environment.Environment ):
+         command += f" --env {env.as_string( )}"
    for item in kw_volume_mapping:
-      command += f" --volume {item.host( )}:{item.guest( )}"
+      if isinstance( item, Mapping ):
+         command += f" --volume {item.as_string( )}"
    for item in kw_port_mapping:
-      command += f" --publish {item.host( )}:{item.guest( )}"
+      if isinstance( item, Mapping ):
+         command += f" --publish {item.as_string( )}"
    command += f" --detach" if kw_daemon else ""
    command += f" {image_name}:{kw_image_tag}" if kw_image_tag else f" {image_name}"
    command += f" {kw_command}" if kw_command else ""
