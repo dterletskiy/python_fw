@@ -9,24 +9,34 @@ import pfw.console
 # https://stackoverflow.com/a/14692747
 
 def get_value_by_list_of_keys( dictionary: dict, keys_list: list, default_value = None, **kwargs ):
+   kw_verbose: int = kwargs.get( "verbose", False )
+
    if not isinstance( keys_list, list ) and not isinstance( keys_list, tuple ):
       return default_value
 
    try:
       return functools.reduce( operator.getitem, keys_list, dictionary )
    except:
-      pfw.console.debug.error( "no such keys combination" )
+      if kw_verbose:
+         pfw.console.debug.error( f"no such keys '{keys_list=}' combination int dict '{dictionary=}'" )
+      else:
+         pfw.console.debug.error( f"no such keys combination int dict" )
       return default_value
 # def get_value_by_list_of_keys
 
 def set_value_by_list_of_keys( dictionary: dict, keys_list: list, value, **kwargs ):
+   kw_verbose: int = kwargs.get( "verbose", False )
+
    if not isinstance( keys_list, list ) and not isinstance( keys_list, tuple ):
       return
 
    try:
-      get_value_by_list_of_keys( dictionary, keys_list[:-1] )[ keys_list[-1] ] = value
+      get_value_by_list_of_keys( dictionary, keys_list[:-1], verbose = False )[ keys_list[-1] ] = value
    except:
-      pfw.console.debug.error( "no such keys combination" )
+      if kw_verbose:
+         pfw.console.debug.error( f"no such keys '{keys_list=}' combination int dict '{dictionary=}'" )
+      else:
+         pfw.console.debug.error( f"no such keys combination int dict" )
 # sef set_value_by_list_of_keys
 
 
