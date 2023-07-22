@@ -193,8 +193,13 @@ def run( container_name: str, image_name: str, **kwargs ):
 
 def exec( container_name: str, **kwargs ):
    kw_command = kwargs.get( "command", None )
+   kw_workdir = kwargs.get( "workdir", None )
 
-   command: str = f"docker exec --interactive --tty {container_name}"
+   command: str = f"docker exec"
+   command += f" --interactive"
+   command += f" --tty"
+   command += f" --workdir {kw_workdir}" if kw_workdir else ""
+   command += f" {container_name}"
    command += f" {kw_command}" if kw_command else ""
    return pfw.shell.execute( command, output = pfw.shell.eOutput.PTY )
 # def exec
