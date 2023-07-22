@@ -134,6 +134,11 @@ def create( container_name: str, image_name: str, **kwargs ):
    return 0 == result["code"]
 # def create
 
+def remove( container_name: str, **kwargs ):
+   command: str = f"docker rm {container_name}"
+   pfw.shell.execute( command, output = pfw.shell.eOutput.PTY )
+# def remove
+
 def start( container_name: str, **kwargs ):
    command: str = f"docker start {container_name}"
    pfw.shell.execute( command, output = pfw.shell.eOutput.PTY )
@@ -143,23 +148,6 @@ def stop( container_name: str, **kwargs ):
    command: str = f"docker stop {container_name}"
    pfw.shell.execute( command, output = pfw.shell.eOutput.PTY )
 # def stop
-
-def remove( container_name: str, **kwargs ):
-   command: str = f"docker rm {container_name}"
-   pfw.shell.execute( command, output = pfw.shell.eOutput.PTY )
-# def remove
-
-def exec( container_name: str, **kwargs ):
-   kw_command = kwargs.get( "command", None )
-
-   command: str = f"docker exec --interactive --tty {container_name}"
-   # Fix terminal's window size in container
-   # https://stackoverflow.com/a/50617797
-   # https://github.com/moby/moby/issues/33794#issuecomment-312873988
-   # command += " --env COLUMNS=\"`tput cols`\" --env LINES=\"`tput lines`\""
-   command += f" {kw_command}" if kw_command else ""
-   return pfw.shell.execute( command, output = pfw.shell.eOutput.PTY )
-# def exec
 
 def run( container_name: str, image_name: str, **kwargs ):
    kw_image_tag = kwargs.get( "image_tag", None )
@@ -202,3 +190,11 @@ def run( container_name: str, image_name: str, **kwargs ):
 
    return 0 == result["code"]
 # def run
+
+def exec( container_name: str, **kwargs ):
+   kw_command = kwargs.get( "command", None )
+
+   command: str = f"docker exec --interactive --tty {container_name}"
+   command += f" {kw_command}" if kw_command else ""
+   return pfw.shell.execute( command, output = pfw.shell.eOutput.PTY )
+# def exec
