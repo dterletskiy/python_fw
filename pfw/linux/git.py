@@ -140,7 +140,7 @@ class Repo:
 
       command = "git clone"
       command += f" --recursive"
-      command += f" --depth {self.__depth}" if None != self.__depth else ""
+      command += f" --depth {self.__depth}" if self.__depth not in [ None, 0 ] else ""
       command += f" --branch {self.__branch}" if None != self.__branch else ""
       command += f" {self.__url}"
       command += f" {self.__directory}"

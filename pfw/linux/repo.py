@@ -115,7 +115,7 @@ class Repo:
    def revert( self ):
       command: str = f"{self.__tool} --trace --time forall"
       command += f" -vc \"git reset --hard\""
-      result = pfw.shell.execute( command, cwd = self.__source_dir )
+      result = pfw.shell.execute( command, cwd = self.__source_dir, output = pfw.shell.eOutput.PTY )
 
       return 0 == result["code"]
    # def revert

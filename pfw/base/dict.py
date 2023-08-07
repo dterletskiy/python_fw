@@ -20,7 +20,7 @@ def get_value_by_list_of_keys( dictionary: dict, keys_list: list, default_value 
       if kw_verbose:
          pfw.console.debug.error( f"no such keys '{keys_list=}' combination int dict '{dictionary=}'" )
       else:
-         pfw.console.debug.error( f"no such keys combination int dict" )
+         pfw.console.debug.warning( f"no such keys combination int dict" )
       return default_value
 # def get_value_by_list_of_keys
 
@@ -36,7 +36,7 @@ def set_value_by_list_of_keys( dictionary: dict, keys_list: list, value, **kwarg
       if kw_verbose:
          pfw.console.debug.error( f"no such keys '{keys_list=}' combination int dict '{dictionary=}'" )
       else:
-         pfw.console.debug.error( f"no such keys combination int dict" )
+         pfw.console.debug.warning( f"no such keys combination int dict" )
 # sef set_value_by_list_of_keys
 
 
