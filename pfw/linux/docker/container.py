@@ -78,11 +78,19 @@ def commit( container_name: str, **kwargs ):
    return 0 == result["code"]
 # def commit
 
-def is_exists( container_name: str, **kwargs ):
+def test( container_name: str, **kwargs ):
+   kw_test = kwargs.get( "test", "exists" )
+
+   if kw_test not in [ "exists", "started" ]:
+      return None
+
    if not container_name:
       return None
 
-   command = f"docker ps --all --filter name={container_name}"
+   command = f"docker ps "
+   if "exists" == kw_test:
+      command += f" --all"
+   command += f" --filter name={container_name}"
    result = pfw.shell.execute( command, output = pfw.shell.eOutput.PTY )
    output = result["output"].split( "\r\n" )
    if not output:
@@ -94,7 +102,15 @@ def is_exists( container_name: str, **kwargs ):
 
    pfw.console.debug.info( "Container with name '%s' already exists with id '%s'" % (container_name, output_list[0]) )
    return { "id": output_list[0], "image": output_list[1] }
+# def test
+
+def is_exists( container_name: str, **kwargs ):
+   return test( container_name, test = "exists" )
 # def is_exists
+
+def is_started( container_name: str, **kwargs ):
+   return test( container_name, test = "started" )
+# def is_started
 
 def create( container_name: str, image_name: str, **kwargs ):
    kw_image_tag = kwargs.get( "image_tag", None )
