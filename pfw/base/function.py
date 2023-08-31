@@ -14,6 +14,7 @@ class Holder:
 
       self.__name = "NoName"
       self.__address = "0x0"
+      # pfw.console.debug.trace( f"{function=}" )
       if match := re.match( "function=<function (.+) at 0x([0-9a-f]+)>", f"{function=}" ):
          self.__name = match.group(1)
          self.__address = f"0x{match.group(2)}"
