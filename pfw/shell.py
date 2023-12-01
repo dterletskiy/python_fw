@@ -169,6 +169,7 @@ def run_and_wait_with_status( command: str, *argv, **kwargs ):
       kw_sudo = kwargs.get( "sudo", False )
       kw_chroot = kwargs.get( "chroot", None )
       kw_chroot_bash = kwargs.get( "chroot_bash", None )
+      kw_ssh = kwargs.get( "ssh", None )
 
       def builder( command ):
          parameters: list = [ ]
@@ -198,20 +199,33 @@ def run_and_wait_with_status( command: str, *argv, **kwargs ):
          command_line = [ "chroot", f"{kw_chroot}" ] + command_line
          kw_sudo = True
 
+      if None != kw_ssh:
+         user_name = kw_ssh["user"]
+         host_name = kw_ssh["host"]
+         is_sudo = kw_ssh.get( "sudo", False ) or kw_sudo
+         ssh_cmd_line_prefix = [ "ssh", f"{user_name}@{host_name}" ]
+         # Here means that "sudo" must be used for command what is executed remotely
+         # In this case we add it for remote command but not for calling "ssh"
+         kw_sudo = False
+         if is_sudo:
+            ssh_cmd_line_prefix += [ "sudo", "-S" ]
+
+         command_line = ssh_cmd_line_prefix + command_line
+
       if True == kw_sudo:
          command_line = [ "sudo", "-S" ] + command_line
 
       if True == kw_string:
          command_line = ' '.join( command_line )
 
-      return command_line
+      return { "command": command_line, "sudo": kw_sudo }
    # def command_builder
 
    def command_builder_test( command, *argv, **kwargs ):
       kw_args = kwargs.get( "args", [ ] )
       kw_string = kwargs.get( "string", False )
 
-      return command_builder( command, kw_args, *argv, string = kw_string )
+      return command_builder( command, kw_args, *argv, string = kw_string )["command"]
    # def command_builder_test
 
    def print_command( command, **kwargs ):
@@ -231,7 +245,16 @@ def run_and_wait_with_status( command: str, *argv, **kwargs ):
       return string
    # def print_command
 
-   command_line = command_builder( command, kw_args, *argv, sudo = kw_sudo, string = kw_shell, chroot_bash = kw_chroot_bash, chroot = kw_chroot )
+   command_builder_result = command_builder(
+         command, kw_args, *argv,
+         sudo = kw_sudo,
+         string = kw_shell,
+         chroot_bash = kw_chroot_bash,
+         chroot = kw_chroot,
+         ssh = kw_ssh
+      )
+   command_line = command_builder_result["command"]
+   kw_sudo = command_builder_result["sudo"]
    command_line_string = print_command( command_line, enable = kw_print_command )
 
    if kw_store_command:
