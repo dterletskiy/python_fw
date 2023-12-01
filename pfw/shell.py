@@ -284,8 +284,7 @@ def run_and_wait_with_status( command: str, *argv, **kwargs ):
             pass
       # def signal_winsize_handler
 
-      signal_winsize_handler_old = signal.getsignal( signal.SIGWINCH )
-      # signal.signal( signal.SIGWINCH, signal_winsize_handler )
+      # signal_winsize_handler_old = signal.signal( signal.SIGWINCH, signal_winsize_handler )
 
 
       process = subprocess.Popen(
@@ -396,7 +395,7 @@ def run_and_wait_with_status( command: str, *argv, **kwargs ):
          if isatty( sys.stdin ):
             termios.tcsetattr( sys.stdin, termios.TCSADRAIN, oldtty )
 
-      signal.signal( signal.SIGWINCH, signal_winsize_handler_old )
+      # signal.signal( signal.SIGWINCH, signal_winsize_handler_old )
 
       return_code = process.poll( )
 
