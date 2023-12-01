@@ -23,10 +23,10 @@ def server( **kwargs ):
    command += f" -1" if kw_one_off else ""
    command += f" -i {kw_interval}" if kw_interval else ""
 
-   pfw.shell.execute( command, **kwargs )
+   return pfw.shell.execute( command, **kwargs )
 # def server
 
-def client( **kwargs ):
+def client( ip, **kwargs ):
    kw_bind = kwargs.get( "bind", None )
    kw_interval = kwargs.get( "interval", None )
    kw_time = kwargs.get( "time", None )
@@ -42,7 +42,7 @@ def client( **kwargs ):
 
    command = ""
    command += f"ip netns exec {kw_namespace}" if kw_namespace else ""
-   command += f" iperf3 -s"
+   command += f" iperf3 -c {ip}"
    command += f" -B {kw_bind}" if kw_bind else ""
    command += f" -i {kw_interval}" if kw_interval else ""
    command += f" -t {kw_time}" if kw_time else ""
@@ -52,5 +52,5 @@ def client( **kwargs ):
    command += f" -u" if kw_udp else ""
    command += f" -V" if kw_verbose else ""
 
-   pfw.shell.execute( command, **kwargs )
+   return pfw.shell.execute( command, **kwargs )
 # def client
