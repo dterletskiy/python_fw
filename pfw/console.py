@@ -185,6 +185,16 @@ class AnsiDebug:
       # sys.stdout.flush( )
 
    def promt( self, string: str = "Press any key...", **kwargs ):
+      kw_mask = kwargs.get( "mask", None )
+
+      message = Format.PROMT + string + Format.RESET if self.__is_colored else string
+
+      if None != kw_mask:
+         return pwinput.pwinput( prompt = message, mask = kw_mask )
+      else:
+         return input( message )
+
+   def promt_dep( self, string: str = "Press any key...", **kwargs ):
       kw_type = kwargs.get( "type", "show" )
 
       def getpassword( string ):
@@ -212,16 +222,6 @@ class AnsiDebug:
       message = Format.PROMT + string + Format.RESET if self.__is_colored else string
 
       return caller( message )
-
-   def promt_ex( self, string: str = "Press any key...", **kwargs ):
-      kw_mask = kwargs.get( "mask", None )
-
-      message = Format.PROMT + string + Format.RESET if self.__is_colored else string
-
-      if None != kw_mask:
-         return pwinput.pwinput( prompt = message, mask = kw_mask )
-      else:
-         return input( message )
 
    def colored( self, is_colored: bool ):
       _is_colored = self.__is_colored
