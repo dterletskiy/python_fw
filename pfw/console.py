@@ -1,6 +1,7 @@
 import sys
 import inspect
 import getpass
+import getch
 
 
 
@@ -183,9 +184,29 @@ class AnsiDebug:
       # sys.stdout.flush( )
 
    def promt( self, string: str = "Press any key...", **kwargs ):
-      kw_hide = kwargs.get( "hide", False )
+      kw_type = kwargs.get( "type", "show" )
 
-      caller = getpass.getpass if kw_hide else input
+      def getpassword( string ):
+         self.write( string, end = '', flush = True )
+
+         passwor = ''
+         while True:
+            x = getch.getch( )
+            if '\r' == x or '\n' == x:
+               break
+            print( '*', end = '', flush = True )
+            passwor += x
+
+         print( "" )
+
+         return passwor
+      # def getpassword
+
+      caller = input
+      if "hide" == kw_type:
+         caller = getpass.getpass
+      elif "asterisk" == kw_type:
+         caller = getpassword
 
       if True == self.__is_colored:
          return caller( Format.PROMT + string + Format.RESET )
