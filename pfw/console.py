@@ -1,5 +1,6 @@
 import sys
 import inspect
+import getpass
 
 
 
@@ -181,11 +182,15 @@ class AnsiDebug:
       # sys.stdout.write( header + string + "\n\r" )
       # sys.stdout.flush( )
 
-   def promt( self, string: str = "Press any key..." ):
+   def promt( self, string: str = "Press any key...", **kwargs ):
+      kw_hide = kwargs.get( "hide", False )
+
+      caller = getpass.getpass if kw_hide else input
+
       if True == self.__is_colored:
-         return input( Format.PROMT + string + Format.RESET )
+         return caller( Format.PROMT + string + Format.RESET )
       else:
-         return input( string )
+         return caller( string )
 
    def colored( self, is_colored: bool ):
       _is_colored = self.__is_colored
