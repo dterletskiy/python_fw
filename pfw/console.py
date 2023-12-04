@@ -2,6 +2,7 @@ import sys
 import inspect
 import getpass
 import getch
+import pwinput
 
 
 
@@ -208,10 +209,19 @@ class AnsiDebug:
       elif "asterisk" == kw_type:
          caller = getpassword
 
-      if True == self.__is_colored:
-         return caller( Format.PROMT + string + Format.RESET )
+      message = Format.PROMT + string + Format.RESET if self.__is_colored else string
+
+      return caller( message )
+
+   def promt_ex( self, string: str = "Press any key...", **kwargs ):
+      kw_mask = kwargs.get( "mask", None )
+
+      message = Format.PROMT + string + Format.RESET if self.__is_colored else string
+
+      if None != kw_mask:
+         return pwinput.pwinput( prompt = message, mask = kw_mask )
       else:
-         return caller( string )
+         return input( message )
 
    def colored( self, is_colored: bool ):
       _is_colored = self.__is_colored
