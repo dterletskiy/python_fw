@@ -12,7 +12,6 @@ def server( **kwargs ):
    kw_namespace = kwargs.get( "namespace", None )
 
    kwargs[ "output" ] = kwargs.get( "output", pfw.shell.eOutput.PTY )
-   kwargs[ "sudo" ] = None != kw_namespace or kwargs.get( "sudo", False )
 
    command = ""
    command += f"ip netns exec {kw_namespace}" if kw_namespace else ""
@@ -38,7 +37,6 @@ def client( ip, **kwargs ):
    kw_namespace = kwargs.get( "namespace", None )
 
    kwargs[ "output" ] = kwargs.get( "output", pfw.shell.eOutput.PTY )
-   kwargs[ "sudo" ] = None != kw_namespace or kwargs.get( "sudo", False )
 
    command = ""
    command += f"ip netns exec {kw_namespace}" if kw_namespace else ""
