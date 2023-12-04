@@ -95,7 +95,7 @@ def init( log_file: str ):
 #     command - shell command
 #     argv - list of command arguments
 #     args - list of command arguments
-#     env - environment variables (default = current scipt environment variables)
+#     env - environment variables (default = current script environment variables)
 #     shell - boolean parameter what indicates will this command be executed by 'subprocess' with corresponding shell value
 #     output - outpot type PIPE or PTY
 #     cwd - chande directory before execution to directory mentioned in this parameter (default = None)
@@ -131,13 +131,13 @@ def run_and_wait_with_status( command: str, *argv, **kwargs ):
    kw_method = kwargs.get( "method", "subprocess" )                     # str
    kw_ssh = kwargs.get( "ssh", None )                                   # { str: str }
    kw_sudo = kwargs.get( "sudo", False )                                # bool
+   kw_sudo_pwd = kwargs.get( "sudo_pwd", None )                         # str
    kw_print_command = kwargs.get( "print_command", True )               # bool
    kw_store_command = kwargs.get( "store_command", COMMAND_LOG_FILE )   # str
    kw_processor = kwargs.get( "processor", None )                       # function
 
 
 
-   kw_env = kw_env if kw_env else os.environ.copy( )
    terminal_width, terminal_height = get_terminal_dimensions( )
    kw_env["COLUMNS"] = str( terminal_width )
    kw_env["LINES"] = str( terminal_height )
@@ -152,21 +152,17 @@ def run_and_wait_with_status( command: str, *argv, **kwargs ):
       return mapping[ output ]
    # def output_to_stdout
 
-   output_tuple = output_to_stdout( kw_output )
-   if False == kw_collect and False == kw_print:
-      output_tuple = ( None, None )
+   output_tuple = output_to_stdout( kw_output ) if kw_collect or kw_print else ( None, None )
 
    if True == kw_shell and None == kw_executable:
       kw_executable = "/bin/bash"
 
-   if "system" == kw_method:
-      kw_shell = True
 
 
-
-   def command_builder( command, args, *argv, **kwargs ):
-      kw_string = kwargs.get( "string", False )
+   def command_builder( command, *argv, **kwargs ):
+      kw_args = kwargs.get( "args", [ ] )
       kw_sudo = kwargs.get( "sudo", False )
+      kw_sudo_pwd = kwargs.get( "sudo_pwd", None )
       kw_chroot = kwargs.get( "chroot", None )
       kw_chroot_bash = kwargs.get( "chroot_bash", None )
       kw_ssh = kwargs.get( "ssh", None )
@@ -174,11 +170,11 @@ def run_and_wait_with_status( command: str, *argv, **kwargs ):
       def builder( command ):
          parameters: list = [ ]
 
-         if list is type( command ):
+         if isinstance( command, list ) or isinstance( command, tuple ):
             for item in command:
-               parameters = parameters + builder( item )
+               parameters += builder( item )
 
-         elif str is type( command ):
+         elif isinstance( command, str ):
             parameters = command.split( )
 
          else:
@@ -187,94 +183,63 @@ def run_and_wait_with_status( command: str, *argv, **kwargs ):
          return parameters
       # def builder
 
-      command_line: list = [ ]
-      command_line = command_line + builder( command )
-      command_line = command_line + builder( list( argv ) )
-      command_line = command_line + builder( args )
+      command_line_list: list = [ ]
+      command_line_list += builder( command )
+      command_line_list += builder( list( argv ) )
+      command_line_list += builder( kw_args )
 
       if None != kw_chroot_bash:
-         command_line = [ "chroot", f"{kw_chroot_bash}", "bash", "-c" ] + ["\""] + command_line + ["\""]
-         kw_sudo = True
+         command_line_list = [ "chroot", f"{kw_chroot_bash}", "bash", "-c" ] + ["\""] + command_line_list + ["\""]
       elif None != kw_chroot:
-         command_line = [ "chroot", f"{kw_chroot}" ] + command_line
-         kw_sudo = True
+         command_line_list = [ "chroot", f"{kw_chroot}" ] + command_line_list
 
       if None != kw_ssh:
          user_name = kw_ssh["user"]
          host_name = kw_ssh["host"]
-         is_sudo = kw_ssh.get( "sudo", False ) or kw_sudo
+         is_sudo = kw_ssh.get( "sudo", False )
+         is_sudo_pwd = kw_ssh.get( "sudo_pwd", None )
          ssh_cmd_line_prefix = [ "ssh", f"{user_name}@{host_name}" ]
-         # Here means that "sudo" must be used for command what is executed remotely
-         # In this case we add it for remote command but not for calling "ssh"
-         kw_sudo = False
+         ssh_sudo_cmd_line_prefix = [ ]
          if is_sudo:
-            ssh_cmd_line_prefix += [ "sudo", "-S" ]
+            if None != is_sudo_pwd:
+               ssh_sudo_cmd_line_prefix += [ "echo", "-e", f"\\\"{is_sudo_pwd}\\\"", "|" ]
+            ssh_sudo_cmd_line_prefix += [ "sudo", "-S" ]
 
-         command_line = ssh_cmd_line_prefix + command_line
+         command_line_list = ssh_cmd_line_prefix + ["\""] + ssh_sudo_cmd_line_prefix + command_line_list + ["\""]
 
       if True == kw_sudo:
-         command_line = [ "sudo", "-S" ] + command_line
+         command_line_list = [ "sudo", "-S" ] + command_line_list
+         if None != kw_sudo_pwd:
+            command_line_list = [ "echo", f"\"{kw_sudo_pwd}\"", "|" ] + command_line_list
 
-      if True == kw_string:
-         command_line = ' '.join( command_line )
+      command_line_string: str = f"cd {kw_cwd};" if kw_cwd else f""
+      command_line_string += ' '.join( command_line_list )
 
-      return { "command": command_line, "sudo": kw_sudo }
+      return { "list": command_line_list, "string": command_line_string }
    # def command_builder
 
-   def command_builder_test( command, *argv, **kwargs ):
-      kw_args = kwargs.get( "args", [ ] )
-      kw_string = kwargs.get( "string", False )
+   command_line = command_builder( command, *argv, **kwargs )
 
-      return command_builder( command, kw_args, *argv, string = kw_string )["command"]
-   # def command_builder_test
+   if True == kw_print_command:
+      pfw.console.debug.header( f"command: ", command_line['string'] )
 
-   def print_command( command, **kwargs ):
-      kw_enable = kwargs.get( "enable", True )
-
-      if False == kw_enable:
-         return
-
-      string: str = f"cd {kw_cwd};" if kw_cwd else f""
-
-      if str is type( command ):
-         string += f" '{command}'"
-      elif list is type( command ):
-         string += f" {command}"
-
-      pfw.console.debug.header( f"command: {string}" )
-      return string
-   # def print_command
-
-   command_builder_result = command_builder(
-         command, kw_args, *argv,
-         sudo = kw_sudo,
-         string = kw_shell,
-         chroot_bash = kw_chroot_bash,
-         chroot = kw_chroot,
-         ssh = kw_ssh
-      )
-   command_line = command_builder_result["command"]
-   kw_sudo = command_builder_result["sudo"]
-   command_line_string = print_command( command_line, enable = kw_print_command )
+   if True == kw_test:
+      return { "code": 255, "output": command_line['string'] }
 
    if kw_store_command:
       f = open( kw_store_command, "a" )
-      f.write( command_line_string + "\n" )
+      f.write( command_line['string'] + "\n" )
       f.close( )
 
-   if True == kw_test:
-      return { "code": 255, "output": command_line_string }
-
-
-
-   if True == kw_sudo:
+   if True == kw_sudo and None == kw_sudo_pwd:
       fake_message = "Fake command to execute it with \'root\' to avoid password promt string in next command what will go to result"
       os.system( f"sudo echo {fake_message}" )
 
    return_code = "200"
    result_output = None
+
    if "system" == kw_method:
-      return_code = os.system( command_line )
+      return_code = os.system( command_line['string'] )
 
    elif "subprocess" == kw_method:
 
@@ -286,9 +251,9 @@ def run_and_wait_with_status( command: str, *argv, **kwargs ):
 
       # signal_winsize_handler_old = signal.signal( signal.SIGWINCH, signal_winsize_handler )
 
-
+      command = command_line['string'] if kw_shell else command_line['list']
       process = subprocess.Popen(
-              command_line
+              command
             , stdin = output_tuple[1]
             , stdout = output_tuple[1]
             , stderr = output_tuple[1]
@@ -407,7 +372,6 @@ def run_and_wait_with_status( command: str, *argv, **kwargs ):
       pfw.console.debug.info( "RETURN CODE: %s" % ( return_code ) )
    else:
       pfw.console.debug.error( "RETURN CODE: %s" % ( return_code ) )
-      # pfw.console.debug.promt( )
 
    return { "code": return_code, "output": result_output }
 # def run_and_wait_with_status
