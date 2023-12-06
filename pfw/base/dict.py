@@ -5,11 +5,23 @@ import pfw.console
 
 
 
+class AddressError( Exception ):
+   def __init__( self, message ):
+      self.message = message
+      super( ).__init__( self.message )
+
+   def __str__( self ):
+      pfw.console.debug.error( f"{self.__class__}: {self.message}" )
+# class AddressError
+
+
+
 # Access nested dictionary items via a list of keys
 # https://stackoverflow.com/a/14692747
 
 def get_value_by_list_of_keys( dictionary: dict, keys_list: list, default_value = None, **kwargs ):
-   kw_verbose: int = kwargs.get( "verbose", False )
+   kw_verbose = kwargs.get( "verbose", False )
+   kw_exception = kwargs.get( "exception", False )
 
    if not isinstance( keys_list, list ) and not isinstance( keys_list, tuple ):
       return default_value
@@ -17,15 +29,20 @@ def get_value_by_list_of_keys( dictionary: dict, keys_list: list, default_value 
    try:
       return functools.reduce( operator.getitem, keys_list, dictionary )
    except:
-      if kw_verbose:
-         pfw.console.debug.error( f"no such keys '{keys_list=}' combination int dict '{dictionary=}'" )
+      message = f"no such keys '{keys_list=}' combination int dict '{dictionary=}'" \
+         if kw_verbose else f"no such keys combination int dict"
+
+      if kw_exception:
+         raise AddressError( message )
       else:
-         pfw.console.debug.warning( f"no such keys combination int dict" )
+         pfw.console.debug.warning( message )
+
       return default_value
 # def get_value_by_list_of_keys
 
 def set_value_by_list_of_keys( dictionary: dict, keys_list: list, value, **kwargs ):
-   kw_verbose: int = kwargs.get( "verbose", False )
+   kw_verbose = kwargs.get( "verbose", False )
+   kw_exception = kwargs.get( "exception", False )
 
    if not isinstance( keys_list, list ) and not isinstance( keys_list, tuple ):
       return
@@ -33,10 +50,13 @@ def set_value_by_list_of_keys( dictionary: dict, keys_list: list, value, **kwarg
    try:
       get_value_by_list_of_keys( dictionary, keys_list[:-1], verbose = False )[ keys_list[-1] ] = value
    except:
-      if kw_verbose:
-         pfw.console.debug.error( f"no such keys '{keys_list=}' combination int dict '{dictionary=}'" )
+      message = f"no such keys '{keys_list=}' combination int dict '{dictionary=}'" \
+         if kw_verbose else f"no such keys combination int dict"
+
+      if kw_exception:
+         raise AddressError( message )
       else:
-         pfw.console.debug.warning( f"no such keys combination int dict" )
+         pfw.console.debug.warning( message )
 # sef set_value_by_list_of_keys
 
 
