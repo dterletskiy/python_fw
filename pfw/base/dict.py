@@ -50,7 +50,7 @@ def get_value_by_str( dictionary: dict, keys_str: str, default_value = None, **k
       return None
 
    keys_list: list = keys_str.split( kw_delimiter )
-   return get_value_by_list_of_keys( dictionary, keys_list, default_value )
+   return get_value_by_list_of_keys( dictionary, keys_list, default_value, **kwargs )
 # def get_value_by_str
 
 def set_value_by_str( dictionary: dict, keys_str: str, value, **kwargs ):

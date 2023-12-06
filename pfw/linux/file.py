@@ -27,7 +27,7 @@ def mktemp( **kwargs ):
    command: str = "mktemp"
    command += f" --directory" if kw_directory else ""
    command += f" --tmpdir={kw_location}" if kw_location else ""
-   command += f" {kw_template}" if kw_template else ""
+   command += f" -t {kw_template}" if kw_template else ""
    result = pfw.shell.execute( command, output = pfw.shell.eOutput.PTY )
 
    if 0 != result["code"]:
