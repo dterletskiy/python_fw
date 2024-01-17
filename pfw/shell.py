@@ -112,6 +112,13 @@ def init( log_file: str ):
 #     sudo - execute command with 'sudo' (default = False)
 #     test - boolean parameter that indicates that final command must not be executed.
 #        As the result will be returned dict { code: 255, output: command }, where command is the final shell command what could be executed.
+#     ssh - use 'ssh' to execute command remotely.
+#        ssh = {
+#           "user": <user name (str)> # required
+#           "host": <remote host ip (str)># required
+#           "sudo": <use sudo to execute command (bool)> # optional
+#           "sudo_pwd": <sudo password (str)> # optional
+#        }
 def run_and_wait_with_status( command: str, *argv, **kwargs ):
    global COMMAND_LOG_FILE
 
