@@ -12,11 +12,11 @@ def ping( ip: str, **kwargs ):
    kwargs[ "output" ] = kwargs.get( "output", pfw.shell.eOutput.PTY )
 
    command = ""
-   command += f"ip netns exec {kw_namespace}" if kw_namespace else ""
+   command += f"ip netns exec {kw_namespace}" if None != kw_namespace else ""
    command += " ping"
-   command += f" -i {kw_interval}" if kw_interval else ""
-   command += f" -c {kw_count}" if kw_count else ""
-   command += f" -I {kw_interface}" if kw_interface else ""
+   command += f" -i {kw_interval}" if None != kw_interval else ""
+   command += f" -c {kw_count}" if None != kw_count else ""
+   command += f" -I {kw_interface}" if None != kw_interface else ""
    command += f" {ip}"
    return pfw.shell.execute( command, **kwargs )
 # def ping
