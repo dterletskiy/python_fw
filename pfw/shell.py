@@ -231,7 +231,7 @@ def run_and_wait_with_status( command: str, *argv, **kwargs ):
       pfw.console.debug.header( f"command: ", command_line['string'] )
 
    if True == kw_test:
-      return { "code": 255, "output": command_line['string'] }
+      return { "code": 255, "output": command_line['string'], "command": command_line['string'] }
 
    if kw_store_command:
       f = open( kw_store_command, "a" )
@@ -242,7 +242,7 @@ def run_and_wait_with_status( command: str, *argv, **kwargs ):
       fake_message = "Fake command to execute it with \'root\' to avoid password promt string in next command what will go to result"
       os.system( f"sudo echo {fake_message}" )
 
-   return_code = "200"
+   return_code = 200
    result_output = None
 
    if "system" == kw_method:
@@ -380,7 +380,7 @@ def run_and_wait_with_status( command: str, *argv, **kwargs ):
    else:
       pfw.console.debug.error( "RETURN CODE: %s" % ( return_code ) )
 
-   return { "code": return_code, "output": result_output }
+   return { "code": return_code, "output": result_output, "command": command_line['string'] }
 # def run_and_wait_with_status
 
 
