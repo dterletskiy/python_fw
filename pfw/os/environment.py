@@ -116,9 +116,46 @@ class Environment:
 
 
 
-# env_set            is { str: [ str ] } or { str: str }
-# env_overwrite      is { str: [ str ] } or { str: str }
-# env_add            is { str: [ str ] } or { str: str }
+# Create "environment" base on parameters.
+# Parameters:
+#     env_set = base environment. If "None" os environment will be used.
+#     env_overwrite = environment vaiables what will be added to base one and in case if variable
+#        already exists with this name its value(s) will be overridden with given ones in this parameter.
+#     env_add = environment vaiables what will be added to base.
+#
+#  All parameters reperesented as { name: [ value ] } or { name: values }, where
+#           - name: str - environment variable name
+#           - value: str - environment variable value
+#           - values: str - environment variable values devided by ':'
+#
+# Reterned value:
+#     { name: [ value ] }
+#
+# Examples:
+#
+# environment = pfw.os.environment.build( )
+# pfw.console.debug.info( environment )
+#
+# environment = pfw.os.environment.build(
+#       env_set = {
+#          "a": [ "a1", "a2", "a3", "a4" ],
+#          "b": [ "b1" ],
+#       }
+#    )
+# pfw.console.debug.info( environment )
+#
+# environment = pfw.os.environment.build(
+#       env_set = environment,
+#       env_add = {
+#          "b": [ "b2", "b3" ],
+#          "c": [ "c1", "c2", "c3" ],
+#       },
+#       env_overwrite = {
+#          "a": [ "a1", "a2", "a3" ],
+#       }
+#    )
+# pfw.console.debug.info( environment )
+
 def build( **kwargs ):
    kw_env_set = kwargs.get( "env_set", None )
    kw_env_overwrite = kwargs.get( "env_overwrite", None )
@@ -131,7 +168,7 @@ def build( **kwargs ):
          if isinstance( values, list ) or isinstance( values, tuple ):
             values = ':'.join( values )
 
-         environment[ name ] = values
+         environment[ name ] = str( values )
    else:
       environment = os.environ.copy( )
 
@@ -140,17 +177,25 @@ def build( **kwargs ):
          if isinstance( values, list ) or isinstance( values, tuple ):
             values = ':'.join( values )
 
-         environment[ name ] = values
+         environment[ name ] = str( values )
 
    if None != kw_env_add:
       for name, values in kw_env_add.items( ):
          if isinstance( values, list ) or isinstance( values, tuple ):
             values = ':'.join( values )
 
-         v = environment.get( name, "" )
-         environment[ name ] = values
-         environment[ name ] += "" if 0 == len( values ) or 0 == len( v ) else ":"
-         environment[ name ] += v
+         # v = environment.get( name, "" )
+         # environment[ name ] = str( values )
+         # environment[ name ] += "" if 0 == len( values ) or 0 == len( v ) else ":"
+         # environment[ name ] += v
+
+         if name in environment:
+            if None != environment[ name ] and 0 < len( environment[ name ] ):
+               environment[ name ] += ":" + values
+            else:
+               environment[ name ] = values
+         else:
+            environment[ name ] = values
 
    return environment
 # def build
