@@ -40,6 +40,7 @@ def client( ip, **kwargs ):
    kw_title = kwargs.get( "title", None )
    kw_bitrate = kwargs.get( "bitrate", None )
    kw_reverse = kwargs.get( "reverse", False )
+   kw_bidir = kwargs.get( "bidir", False )
    kw_verbose = kwargs.get( "verbose", False )
    kw_timestamp = kwargs.get( "timestamp", False )
    kw_json = kwargs.get( "json", False )
@@ -59,6 +60,7 @@ def client( ip, **kwargs ):
    command += f" -b {kw_bitrate}" if None != kw_bitrate else ""
    command += f" -T {kw_title}" if None != kw_title else ""
    command += f" -R" if kw_reverse else ""
+   command += f" --bidir" if kw_bidir else ""
    command += f" --timestamps" if kw_timestamp else ""
    command += f" -u" if kw_udp else ""
    command += f" -V" if kw_verbose else ""
