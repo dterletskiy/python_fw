@@ -11,6 +11,7 @@ import tty
 import termios
 import fcntl
 import struct
+import shlex
 
 import pfw.console
 
@@ -229,6 +230,7 @@ def run_and_wait_with_status( command: str, *argv, **kwargs ):
 
    if True == kw_print_command:
       pfw.console.debug.header( f"command: ", command_line['string'] )
+      pfw.console.debug.header( f"command: ", command_line['list'] )
 
    if True == kw_test:
       return { "code": 255, "output": command_line['string'], "command": command_line['string'] }
@@ -393,4 +395,361 @@ def executen( commands: list, **kwargs ):
    for command in commands:
       execute( command, **kwargs )
 # def execute
+
+
+
+
+
+
+
+
+def join_command( command, *argv, **kwargs ):
+   kw_args = kwargs.get( "args", [ ] )
+   kw_debug = kwargs.get( "debug", False )      # bool
+
+   result = command
+   for arg in list(argv) + list(kw_args):
+      if None == arg:
+         continue
+      elif not isinstance( arg, str ):
+         pfw.console.debug.error( f"'{arg}' must be a string or None" )
+         return None
+      elif 0 == len( arg ):
+         continue
+
+      result += ' ' + arg
+
+   if kw_debug:
+      pfw.console.debug.header( f"command: {result}" )
+
+   return result
+# def join_command
+
+def build_command( command, *argv, **kwargs ):
+   kw_args = kwargs.get( "args", [ ] )
+   kw_debug = kwargs.get( "debug", False )      # bool
+
+   result = command
+   # result = result + ' ' + ' '.join( shlex.quote( arg ) for arg in argv )
+   # result = result + ' ' + ' '.join( shlex.quote( arg ) for arg in kw_args )
+   for arg in list(argv) + list(kw_args):
+      if None == arg:
+         continue
+      elif not isinstance( arg, str ):
+         pfw.console.debug.error( f"'{arg}' must be a string or None" )
+         return None
+      elif 0 == len( arg ):
+         continue
+
+      result += ' ' + shlex.quote( arg )
+
+   if kw_debug:
+      pfw.console.debug.header( f"command: {result}" )
+
+   return result
+# def build_command
+
+# Function for executing shell command
+#     command - shell command
+#     argv - list of command arguments
+#     args - list of command arguments
+#     env - environment variables (default = current script environment variables)
+#     output - outpot type PIPE or PTY
+#     cwd - chande directory before execution to directory mentioned in this parameter (default = None)
+#     collect - store output to returned value or not (default = True)
+#     print - print output or not (default = True)
+#     executable - specifies a replacement program to execute (default = None)
+#     universal_newlines - 
+#     expected_return_code - expecter return code for succeed execution (default = 0)
+#     chroot - use 'chroot' for execution with path mentioned in current parameter (default = None)
+#     chroot_bash - use 'chroot' for execution as shell command with path mentioned in current parameter (default = None)
+#     method - method what will be used for execution: 'system' or 'subprocess' (default = subprocess)
+#     print_command - print executed command in console (default = True)
+#     store_command - store executed command to file (default = None)
+#     sudo - execute command with 'sudo' (default = False)
+#     test - boolean parameter that indicates that final command must not be executed.
+#        As the result will be returned dict { code: 255, output: command }, where command is the final shell command what could be executed.
+#     ssh - use 'ssh' to execute command remotely. ssh via ssh supported.
+#        In case of simple single ssh:
+#        ssh = {
+#           "user": <user name (str)> # required
+#           "host": <remote host ip (str)># required
+#           "sudo": <use sudo to execute command (bool)> # optional
+#           "sudo_pwd": <sudo password (str)> # optional
+#        }
+#        In case of ssh via ssh ... :
+#        ssh1 = { "user": <...>, "host": <...>, "sudo": True/False, "sudo_pwd": <...> }
+#        ssh2 = { "user": <...>, "host": <...>, "sudo": True/False, "sudo_pwd": <...> }
+#        ssh3 = { "user": <...>, "host": <...>, "sudo": True/False, "sudo_pwd": <...> }
+#        ssh = [ ssh1, ssh2, ssh3 ]
+#        In this case command will be executed on the remote host what corresponds last ssh item in the list 'ssh3'
+#        accessed via 'ssh2' accessed via 'ssh1'.
+#     processor - function what will called for each line generated in output in runtime
+def run_and_wait_with_status2( command: str, *argv, **kwargs ):
+   global COMMAND_LOG_FILE
+
+   kw_args = kwargs.get( "args", [ ] )                                  # [ str ]
+   kw_test = kwargs.get( "test", False )                                # bool
+   kw_env = kwargs.get( "env", os.environ.copy( ) )                     # { str: str }
+   kw_output = kwargs.get( "output", eOutput.PIPE )                     # pfw.shell.eOutput
+   kw_cwd = kwargs.get( "cwd", None )                                   # str
+   kw_collect = kwargs.get( "collect", True )                           # bool
+   kw_print = kwargs.get( "print", True )                               # bool
+   kw_executable = kwargs.get( "executable", None )                     # str
+   kw_universal_newlines = kwargs.get( "universal_newlines", False )    # bool
+   kw_expected_return_code = kwargs.get( "expected_return_code", 0 )    # int
+   kw_chroot = kwargs.get( "chroot", None )                             # str
+   kw_chroot_bash = kwargs.get( "chroot_bash", None )                   # str
+   kw_method = kwargs.get( "method", "subprocess" )                     # str
+   kw_ssh = kwargs.get( "ssh", None )                                   # { str: str }
+   kw_sudo = kwargs.get( "sudo", False )                                # bool
+   kw_sudo_pwd = kwargs.get( "sudo_pwd", None )                         # str
+   kw_print_command = kwargs.get( "print_command", True )               # bool
+   kw_store_command = kwargs.get( "store_command", COMMAND_LOG_FILE )   # str
+   kw_processor = kwargs.get( "processor", None )                       # function( str )
+
+
+
+   terminal_width, terminal_height = get_terminal_dimensions( )
+   kw_env["COLUMNS"] = str( terminal_width )
+   kw_env["LINES"] = str( terminal_height )
+
+
+
+   def output_to_stdout( output: eOutput ):
+      mapping: dict = {
+         eOutput.PIPE:     ( subprocess.PIPE, subprocess.PIPE ),
+         eOutput.PTY:      pty.openpty( )
+      }
+      return mapping[ output ]
+   # def output_to_stdout
+
+   output_tuple = output_to_stdout( kw_output ) if kw_collect or kw_print else ( None, None )
+
+   if not kw_executable:
+      kw_executable = "/bin/bash"
+
+
+
+   def command_builder( command, *argv, **kwargs ):
+      kw_args = kwargs.get( "args", [ ] )
+      kw_sudo = kwargs.get( "sudo", False )
+      kw_sudo_pwd = kwargs.get( "sudo_pwd", None )
+      kw_chroot = kwargs.get( "chroot", None )
+      kw_chroot_bash = kwargs.get( "chroot_bash", None )
+      kw_ssh = kwargs.get( "ssh", None )
+
+      # command_line = build_command( command, *argv, args = kw_args, debug = True )
+      command_line = join_command( command, *argv, args = kw_args, debug = True )
+      if None == command_line:
+         return None
+
+      if None != kw_chroot_bash:
+         command_line = "chroot {} bash -c".format( shlex.quote( command_line ) )
+      elif None != kw_chroot:
+         command_line = "chroot {}".format( shlex.quote( command_line ) )
+
+      if None != kw_ssh:
+         if isinstance( kw_ssh, dict ):
+            kw_ssh = [ kw_ssh ]
+         if not isinstance( kw_ssh, list ):
+            pfw.console.debug.error( f"'ssh' argument must be a 'dict' or 'list' of 'dist'" )
+            return None
+
+         for ssh_item in reversed( kw_ssh ):
+            user_name = ssh_item["user"]
+            host_name = ssh_item["host"]
+            is_sudo = ssh_item.get( "sudo", False )
+            is_sudo_pwd = ssh_item.get( "sudo_pwd", None )
+
+            ssh_cmd_line_prefix = f"ssh {user_name}@{host_name}"
+
+            if is_sudo:
+               command_line = f"sudo -S {command_line}"
+               if None != is_sudo_pwd:
+                  command_line = f"echo -e {shlex.quote( is_sudo_pwd )} | {command_line}"
+
+            command_line = build_command( ssh_cmd_line_prefix, command_line, debug = True )
+            # command_line = join_command( ssh_cmd_line_prefix, command_line, debug = True )
+            if None == command_line:
+               return None
+
+      if True == kw_sudo:
+         command_line = f"sudo -S {command_line}"
+         if None != kw_sudo_pwd:
+            command_line = f"echo -e {shlex.quote( kw_sudo_pwd )} | {command_line}"
+
+      command_line: str = f"cd {kw_cwd}; {command_line}" if kw_cwd else command_line
+
+      return command_line
+   # def command_builder
+
+   command_line = command_builder( command, *argv, **kwargs )
+   if None == command_line:
+      return { "code": 254, "output": None, "command": None }
+
+   if True == kw_print_command:
+      pfw.console.debug.header( f"command: ", command_line )
+
+   if True == kw_test:
+      return { "code": 255, "output": None, "command": command_line }
+
+   if kw_store_command:
+      f = open( kw_store_command, "a" )
+      f.write( command_line + "\n" )
+      f.close( )
+
+   if True == kw_sudo and None == kw_sudo_pwd:
+      fake_message = "Fake command to execute it with \'root\' to avoid password promt string in next command what will go to result"
+      os.system( f"sudo echo {fake_message}" )
+
+   return_code = 200
+   result_output = None
+
+   if "system" == kw_method:
+      return_code = os.system( command_line )
+
+   elif "subprocess" == kw_method:
+
+      def signal_winsize_handler( signum, frame ):
+         pfw.console.debug.warning( f"processing signal: {signum}" )
+         if signal.SIGWINCH == signum:
+            pass
+      # def signal_winsize_handler
+
+      # signal_winsize_handler_old = signal.signal( signal.SIGWINCH, signal_winsize_handler )
+
+      process = subprocess.Popen(
+              command_line
+            , stdin = output_tuple[1]
+            , stdout = output_tuple[1]
+            , stderr = output_tuple[1]
+            , universal_newlines = kw_universal_newlines
+            , env = kw_env
+            , shell = True
+            , executable = kw_executable
+            , cwd = kw_cwd
+         )
+
+      result_output = ""
+      if False == kw_collect and False == kw_print:
+         process.wait( )
+      else:
+         if isatty( sys.stdin ):
+            oldtty = termios.tcgetattr( sys.stdin )
+            tty.setraw( sys.stdin.fileno( ) )
+            tty.setcbreak( sys.stdin.fileno( ) )
+
+         if eOutput.PTY == kw_output:
+            master_fd = output_tuple[0]
+
+            while True:
+               try:
+                  r, _, e = select.select( [master_fd, sys.stdin], [], [], 0.05 )
+               except select.error as e:
+                  if e[0] != errno.EINTR: raise
+
+               if master_fd in r:
+                  output = os.read( master_fd, 10240 )
+
+                  if True == kw_print:
+                     sys.stdout.buffer.write( output.replace( b'\n', b'\r\n' ) )
+                     sys.stdout.flush( )
+                  if True == kw_collect:
+                     # output_decoded = output.strip( ).decode( encoding = 'utf-8', errors = 'ignore' )
+                     output_decoded = output.decode( encoding = 'utf-8', errors = 'ignore' )
+                     result_output += output_decoded
+                     if kw_processor: kw_processor( output_decoded )
+
+               if sys.stdin in r:
+                  output = os.read( sys.stdin.fileno( ), 10240 )
+
+                  if len( output ) == 0: # @TDA: ???
+                     break
+
+                  if output == b'\x03':
+                     raise KeyboardInterrupt( )
+
+                  if True == kw_print:
+                     os.write( master_fd, output )
+
+               if None != process.poll( ):
+                  break
+
+         elif eOutput.PIPE == kw_output:
+            while True:
+               try:
+                  r, _, e = select.select( [process.stdout.fileno( ), process.stderr.fileno( )], [], [], 0.05 )
+               except select.error as e:
+                  if e[0] != errno.EINTR: raise
+
+               if process.stdout.fileno( ) in r:
+                  output = process.stdout.read1( )
+
+                  if True == kw_print:
+                     sys.stdout.buffer.write( output.replace( b'\n', b'\r\n' ) )
+                     sys.stdout.flush( )
+                  if True == kw_collect:
+                     # output_decoded = output.strip( ).decode( encoding = 'utf-8', errors = 'ignore' )
+                     output_decoded = output.decode( encoding = 'utf-8', errors = 'ignore' )
+                     result_output += output_decoded
+                     if kw_processor: kw_processor( output_decoded )
+
+               if process.stderr.fileno( ) in r:
+                  output = process.stderr.read1( )
+
+                  if True == kw_print:
+                     sys.stderr.buffer.write( output.replace( b'\n', b'\r\n' ) )
+                     sys.stderr.flush( )
+                  if True == kw_collect:
+                     # output_decoded = output.strip( ).decode( encoding = "utf-8" )
+                     output_decoded = output.decode( encoding = "utf-8" )
+                     result_output += output_decoded
+                     if kw_processor: kw_processor( output_decoded )
+
+               if sys.stdin in r:
+                  output = os.read( sys.stdin.fileno( ), 10240 )
+
+                  if len( output ) == 0: # @TDA: ???
+                     break
+
+                  if output == b'\x03':
+                     raise KeyboardInterrupt( )
+
+                  if True == kw_print:
+                     process.stdin.write( output )
+                     process.stdin.flush( )
+
+               if None != process.poll( ):
+                  break
+
+
+         if isatty( sys.stdin ):
+            termios.tcsetattr( sys.stdin, termios.TCSADRAIN, oldtty )
+
+      # signal.signal( signal.SIGWINCH, signal_winsize_handler_old )
+
+      return_code = process.poll( )
+
+   else:
+      pfw.console.debug.error( f"Undefined method '{kw_method}'" )
+
+
+   if kw_expected_return_code == return_code:
+      pfw.console.debug.info( "RETURN CODE: %s" % ( return_code ) )
+   else:
+      pfw.console.debug.error( "RETURN CODE: %s" % ( return_code ) )
+
+   return { "code": return_code, "output": result_output, "command": command_line }
+# def run_and_wait_with_status2
+
+def execute2( command: str, *argv, **kwargs ):
+   return run_and_wait_with_status2( command, *argv, **kwargs )
+# def execute
+
+
+
+
+
+
 
