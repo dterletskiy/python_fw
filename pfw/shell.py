@@ -752,4 +752,69 @@ def execute2( command: str, *argv, **kwargs ):
 
 
 
+class CmdLine:
+   def __init__( self, command: str, *argv, **kwargs ):
+      self.__command = command
+      self.__parameters = [ ]
+
+      self.add_parameters( argv )
+   # def __init__
+
+   def __del__( self ):
+      pass
+   # def __del__
+
+   def __setattr__( self, attr, value ):
+      attr_list = [ i for i in self.__class__.__dict__.keys( ) ]
+      if attr in attr_list:
+         self.__dict__[ attr ] = value
+         return
+      raise AttributeError
+   # def __setattr__
+
+   def __str__( self ):
+      attr_list = [ i for i in self.__class__.__dict__.keys( ) if i[:2] != pfw.base.struct.ignore_field ]
+      vector = [ f"{str( attr )} = {str( self.__dict__.get( attr ) )}" for attr in attr_list ]
+      return self.__class__.__name__ + " { " + ", ".join( vector ) + " }"
+   # def __str__
+
+   def info( self, **kwargs ):
+      kw_tabulations = kwargs.get( "tabulations", 0 )
+      kw_message = kwargs.get( "message", "" )
+      pfw.console.debug.info( f"{kw_message} (type {self.__class__.__name__}):", tabs = ( kw_tabulations + 0 ) )
+
+      pfw.console.debug.info( "command          :\'", self.__command, "\'", tabs = ( kw_tabulations + 1 ) )
+      pfw.console.debug.info( "values:", tabs = ( kw_tabulations + 1 ) )
+      for parameter in self.__parameters:
+         pfw.console.debug.info( "  parameter   :\'", parameter, "\'", tabs = ( kw_tabulations + 1 ) )
+      pfw.console.debug.info( "as string        :\'", self.as_string( ), "\'", tabs = ( kw_tabulations + 1 ) )
+   # def info
+
+   def add_parameter( self, parameter ):
+      if isinstance( parameter, str ):
+         self.__parameters.append( parameter )
+      elif isinstance( parameter, CmdLine ):
+         self.__parameters.append( parameter.as_string( ) )
+      else:
+         pfw.console.debug.error( f"parameter '{parameter}' must be a string or CmdLine" )
+   # def add_parameter
+
+   def add_parameters( self, parameters ):
+      for parameter in parameters:
+         self.add_parameter( parameter )
+   # def add_parameters
+
+   def as_string( self ):
+      return shlex.join( [self.__command] + self.__parameters )
+   # def as_string
+
+   def execute( self, **kwargs ):
+      return execute( self.as_string( ), **kwargs )
+   # def execute
+
+
+
+   __command: str = None
+   __parameters: list = None
+# class CmdLine
 
