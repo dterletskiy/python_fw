@@ -6,6 +6,7 @@ import pfw.shell
 def server( **kwargs ):
    kw_bind = kwargs.get( "bind", None )
    kw_port = kwargs.get( "port", None )
+   kw_affinity = kwargs.get( "affinity", None )
    kw_interval = kwargs.get( "interval", None )
    kw_daemon = kwargs.get( "daemon", False )
    kw_one_off = kwargs.get( "one_off", False )
@@ -20,18 +21,21 @@ def server( **kwargs ):
    command += f" iperf3 -s"
    command += f" -p {kw_port}" if None != kw_port else ""
    command += f" -B {kw_bind}" if None != kw_bind else ""
+   command += f" -A {kw_affinity}" if None != kw_affinity else ""
    command += f" -D" if kw_daemon else ""
    command += f" -V" if kw_verbose else ""
    command += f" -J" if kw_json else ""
    command += f" -1" if kw_one_off else ""
    command += f" -i {kw_interval}" if None != kw_interval else ""
+   command += f" --forceflush"
 
-   return pfw.shell.execute( command, **kwargs )
+   return pfw.shell.execute2( command, **kwargs )
 # def server
 
 def client( ip, **kwargs ):
    kw_bind = kwargs.get( "bind", None )
    kw_port = kwargs.get( "port", None )
+   kw_affinity = kwargs.get( "affinity", None )
    kw_interval = kwargs.get( "interval", None )
    kw_time = kwargs.get( "time", None )
    kw_bytes = kwargs.get( "bytes", None )
@@ -54,6 +58,7 @@ def client( ip, **kwargs ):
    command += f" iperf3 -c {ip}"
    command += f" -p {kw_port}" if None != kw_port else ""
    command += f" -B {kw_bind}" if None != kw_bind else ""
+   command += f" -A {kw_affinity}" if None != kw_affinity else ""
    command += f" -i {kw_interval}" if None != kw_interval else ""
    command += f" -t {kw_time}" if None != kw_time else ""
    command += f" -n {kw_bytes}" if None != kw_bytes else ""
@@ -67,6 +72,7 @@ def client( ip, **kwargs ):
    command += f" -u" if kw_udp else ""
    command += f" -V" if kw_verbose else ""
    command += f" -J" if kw_json else ""
+   command += f" --forceflush"
 
-   return pfw.shell.execute( command, **kwargs )
+   return pfw.shell.execute2( command, **kwargs )
 # def client
