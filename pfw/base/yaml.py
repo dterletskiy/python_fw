@@ -106,7 +106,7 @@ class Processor:
 
 
    def get_variable( self, name, default_value = None ):
-      return pfw.base.dict.get_value( self.__variables, name, default_value )
+      return pfw.base.dict.get_value( self.__variables, name, default_value, verbose = True )
    # def get_variable
 
    def get_variables( self ):
@@ -114,7 +114,7 @@ class Processor:
    # def get_variables
 
    def set_variable( self, name, value ):
-      pfw.base.dict.set_value( self.__variables, name, value )
+      pfw.base.dict.set_value( self.__variables, name, value, verbose = True )
    # def set_variable
 
    def get_root_node( self, root_node_name: str ):
