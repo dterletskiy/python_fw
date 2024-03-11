@@ -469,21 +469,19 @@ def build_command( command, *argv, **kwargs ):
 #     sudo - execute command with 'sudo' (default = False)
 #     test - boolean parameter that indicates that final command must not be executed.
 #        As the result will be returned dict { code: 255, output: command }, where command is the final shell command what could be executed.
-#     ssh - use 'ssh' to execute command remotely. ssh via ssh supported.
-#        In case of simple single ssh:
+#     ssh - use 'ssh' to execute command remotely. ssh with jumphost is supported.
 #        ssh = {
 #           "user": <user name (str)> # required
-#           "host": <remote host ip (str)># required
+#           "host": <remote host ip (str)> # required
 #           "sudo": <use sudo to execute command (bool)> # optional
 #           "sudo_pwd": <sudo password (str)> # optional
+#           "jump_hosts": [ # optional
+#                 {
+#                    "user": <jumphost user name (str)> # required
+#                    "host": <jumphost remote host ip (str)> # required
+#                 }, ...
+#              ]
 #        }
-#        In case of ssh via ssh ... :
-#        ssh1 = { "user": <...>, "host": <...>, "sudo": True/False, "sudo_pwd": <...> }
-#        ssh2 = { "user": <...>, "host": <...>, "sudo": True/False, "sudo_pwd": <...> }
-#        ssh3 = { "user": <...>, "host": <...>, "sudo": True/False, "sudo_pwd": <...> }
-#        ssh = [ ssh1, ssh2, ssh3 ]
-#        In this case command will be executed on the remote host what corresponds last ssh item in the list 'ssh3'
-#        accessed via 'ssh2' accessed via 'ssh1'.
 #     processor - function what will called for each line generated in output in runtime
 def run_and_wait_with_status2( command: str, *argv, **kwargs ):
    global COMMAND_LOG_FILE
@@ -550,29 +548,35 @@ def run_and_wait_with_status2( command: str, *argv, **kwargs ):
          command_line = "chroot {}".format( shlex.quote( command_line ) )
 
       if None != kw_ssh:
-         if isinstance( kw_ssh, dict ):
-            kw_ssh = [ kw_ssh ]
-         if not isinstance( kw_ssh, list ):
-            pfw.console.debug.error( f"'ssh' argument must be a 'dict' or 'list' of 'dist'" )
+         if not isinstance( kw_ssh, dict ):
+            pfw.console.debug.error( f"'ssh' argument must be a 'dict'" )
             return None
 
-         for ssh_item in reversed( kw_ssh ):
-            user_name = ssh_item["user"]
-            host_name = ssh_item["host"]
-            is_sudo = ssh_item.get( "sudo", False )
-            is_sudo_pwd = ssh_item.get( "sudo_pwd", None )
+         user_name = kw_ssh["user"]
+         host_name = kw_ssh["host"]
+         is_sudo = kw_ssh.get( "sudo", False )
+         is_sudo_pwd = kw_ssh.get( "sudo_pwd", None )
+         jump_hosts = kw_ssh.get( "jump_hosts", [ ] )
 
-            ssh_cmd_line_prefix = f"ssh {user_name}@{host_name}"
+         ssh_cmd_line_prefix = f"ssh"
+         if None != jump_hosts and 0 < len( jump_hosts ):
+            ssh_cmd_line_prefix += " -J"
+            for jump_host in jump_hosts:
+               jump_host_user_name = jump_host["user"]
+               jump_host_host_name = jump_host["host"]
+               ssh_cmd_line_prefix += f" {jump_host_user_name}@{jump_host_host_name},"
+            ssh_cmd_line_prefix = ssh_cmd_line_prefix[:-1]
+         ssh_cmd_line_prefix += f" {user_name}@{host_name}"
 
-            if is_sudo:
-               command_line = f"sudo -S {command_line}"
-               if None != is_sudo_pwd:
-                  command_line = f"echo -e {shlex.quote( is_sudo_pwd )} | {command_line}"
+         if is_sudo:
+            command_line = f"sudo -S {command_line}"
+            if None != is_sudo_pwd:
+               command_line = f"echo -e {shlex.quote( is_sudo_pwd )} | {command_line}"
 
-            command_line = build_command( ssh_cmd_line_prefix, command_line, debug = True )
-            # command_line = join_command( ssh_cmd_line_prefix, command_line, debug = True )
-            if None == command_line:
-               return None
+         command_line = build_command( ssh_cmd_line_prefix, command_line, debug = True )
+         # command_line = join_command( ssh_cmd_line_prefix, command_line, debug = True )
+         if None == command_line:
+            return None
 
       if True == kw_sudo:
          command_line = f"sudo -S {command_line}"
@@ -818,3 +822,15 @@ class CmdLine:
    __parameters: list = None
 # class CmdLine
 
+# # cmd_line_1 = pfw.shell.CmdLine( "grep", "cpu ", "/proc/stat" )
+# cmd_line_1 = pfw.shell.CmdLine( "ip", "addr" )
+# cmd_line_1.info( )
+# # cmd_line_1.execute( )
+
+# cmd_line_2 = pfw.shell.CmdLine( "ssh", "root@192.168.1.2", cmd_line_1 )
+# cmd_line_2.info( )
+# # cmd_line_2.execute( )
+
+# cmd_line_3 = pfw.shell.CmdLine( "ssh", "testpc7@10.22.64.18", cmd_line_2 )
+# cmd_line_3.info( )
+# # cmd_line_3.execute( )
