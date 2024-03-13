@@ -37,6 +37,7 @@ class Processor:
       kw_root_nodes = kwargs.get( "root_nodes", [ ] )
       kw_critical_variables = kwargs.get( "critical_variables", [ ] )
       kw_gen_file = kwargs.get( "gen_file", None )
+      kw_verbose = kwargs.get( "verbose", False )
 
       def read_file( file, spaces: str = "" ):
          pattern: str = r"^(\s*)include:\s*\"(.*)\"\s*$"
@@ -86,6 +87,9 @@ class Processor:
       for root_node in kw_root_nodes:
          self.__root_nodes[ root_node ] = yaml_data.get( root_node, { } )
          self.__process_yaml_data( self.__root_nodes[ root_node ] )
+
+      if kw_verbose:
+         self.info( )
    # def __init__
 
    def __del__( self ):
