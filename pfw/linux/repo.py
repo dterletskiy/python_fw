@@ -100,6 +100,7 @@ class Repo:
       command += f" --current-branch"
       command += f" --no-clone-bundle"
       command += f" --no-tags"
+      command += f" --fetch-submodules"
       result = pfw.shell.execute( command, cwd = self.__source_dir, output = pfw.shell.eOutput.PTY )
 
       return 0 == result["code"]
