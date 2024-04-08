@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import copy
+import datetime
 import re
 import os
 import enum
@@ -36,7 +37,7 @@ class Processor:
    def __init__( self, file: str, **kwargs ):
       kw_root_nodes = kwargs.get( "root_nodes", [ ] )
       kw_critical_variables = kwargs.get( "critical_variables", [ ] )
-      kw_gen_file = kwargs.get( "gen_file", None )
+      kw_gen_dir = kwargs.get( "gen_dir", None )
       kw_verbose = kwargs.get( "verbose", False )
 
       def read_file( file, spaces: str = "" ):
@@ -61,10 +62,6 @@ class Processor:
       # def read_file
 
       yaml_lines = read_file( file )
-      if None != kw_gen_file:
-         gen_file_h = open( kw_gen_file, "w" )
-         gen_file_h.write( yaml_lines )
-         gen_file_h.close( )
       yaml_data = yaml.load( yaml_lines, Loader = yaml.SafeLoader )
       # yaml_stream = yaml.compose( yaml_fd )
 
@@ -90,6 +87,15 @@ class Processor:
 
       if kw_verbose:
          self.info( )
+
+      if kw_gen_dir:
+         timestamp = datetime.datetime.now( ).strftime( "%Y-%m-%d_%H-%M-%S" )
+         with open( f"{kw_gen_dir}/merged_{timestamp}.yaml", "w" ) as f:
+            f.write( yaml_lines )
+         with open( f"{kw_gen_dir}/processed_{timestamp}.yaml", "w" ) as f:
+            data: dict = { "variables": self.__variables }
+            data.update( self.__root_nodes )
+            yaml.dump( data, f )
    # def __init__
 
    def __del__( self ):
