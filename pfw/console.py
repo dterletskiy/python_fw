@@ -3,6 +3,7 @@ import inspect
 import getpass
 import getch
 import pwinput
+import datetime
 
 
 
@@ -122,67 +123,84 @@ Format            = AnsiFormat( )
 
 
 class AnsiDebug:
-   def __init__( self, is_colored: bool, inspect: int ):
-      self.__is_colored = is_colored
-      self.__inspect = inspect
+   def __init__( self, **kwargs ):
+      self.__is_colored: bool = kwargs.get( "colored", True )
+      self.__inspect: int = kwargs.get( "inspect", 0 )
+      self.__timestamp: bool = kwargs.get( "timestamp", True )
+      self.__end: str = kwargs.get( "end", '\n\r' )
+      self.__sep: str = kwargs.get( "sep", '' )
+      self.__tabs: int = kwargs.get( "tabs", 0 )
+      self.__def_tabs: str = kwargs.get( "def_tabs", "   " )
+      self.__flush: bool = kwargs.get( "flush", False )
+      self.__file = kwargs.get( "file", sys.stdout )
+   # def __init__
 
    def header( self, *arguments, **kwargs ):
       self.write( Format.HEADER, *arguments, **kwargs )
+   # def header
 
    def question( self, *arguments, **kwargs ):
       self.write( Format.QUESTION, *arguments, **kwargs )
+   # def question
 
    def promt( self, *arguments, **kwargs ):
       self.write( Format.PROMT, *arguments, **kwargs )
+   # def promt
 
    def trace( self, *arguments, **kwargs ):
       self.write( Format.TRACE, *arguments, **kwargs )
+   # def trace
 
    def info( self, *arguments, **kwargs ):
       self.write( Format.INFO, *arguments, **kwargs )
+   # def info
 
    def ok( self, *arguments, **kwargs ):
       self.write( Format.OK, *arguments, **kwargs )
+   # def ok
 
    def warning( self, *arguments, **kwargs ):
       self.write( Format.WARNING, *arguments, **kwargs )
+   # def warning
 
    def error( self, *arguments, **kwargs ):
       self.write( Format.ERROR, *arguments, **kwargs )
+   # def error
 
    def marker( self, *arguments, **kwargs ):
       self.write( Format.ERROR, "-------------------------", *arguments, "-------------------------", **kwargs )
+   # def marker
 
    def write( self, ansi_format, *arguments, **kwargs ):
-      kw_tabs: int = kwargs.get( "tabs", 0 )
+      kw_tabs: int = kwargs.get( "tabs", self.__tabs )
+      kw_def_tabs: str = kwargs.get( "def_tabs", self.__def_tabs )
+      kw_end: str = kwargs.get( "end", self.__end )
+      kw_sep: str = kwargs.get( "sep", self.__sep )
+      kw_flush: bool = kwargs.get( "flush", self.__flush )
+      kw_file = kwargs.get( "file", self.__file )
       kw_inspect: int = kwargs.get( "inspect", self.__inspect )
-      kw_end: str = kwargs.get( "end", '\n\r' )
-      kw_sep: str = kwargs.get( "sep", '' )
-      kw_flush: bool = kwargs.get( "flush", False )
-      kw_file = kwargs.get( "file", sys.stdout )
+      kw_timestamp = kwargs.get( "timestamp", self.__timestamp )
+
+      timestamp = datetime.datetime.now( ).strftime( "%Y.%m.%d %H.%M.%S.%f" ) if kw_timestamp else ""
 
       string: str = ""
-      if True == self.__is_colored:
-         string: str = ansi_format
+      string += ansi_format if self.__is_colored else ""
+      string += kw_tabs * kw_def_tabs
+      string += ''.join( str(arg) for arg in arguments )
+      string += Format.RESET if self.__is_colored else ""
 
-      string += kw_tabs * "   "
-      for argument in arguments:
-         string += str( argument )
-
-      if True == self.__is_colored:
-         string += Format.RESET
-
-      header: str = ""
+      header: str = f"{timestamp}: " if timestamp else ""
       if 1 == kw_inspect:
          frame = inspect.stack( )[2]
-         header = "[" + frame.function + ":" + str(frame.lineno) + "] -> "
+         header += "[" + frame.function + ":" + str(frame.lineno) + "] -> "
       elif 2 == kw_inspect:
          frame = inspect.stack( )[2]
-         header = "[" + frame.filename + ":" + frame.function + ":" + str(frame.lineno) + "] -> "
+         header += "[" + frame.filename + ":" + frame.function + ":" + str(frame.lineno) + "] -> "
 
       print( header, string, end = kw_end, sep = kw_sep, flush = kw_flush, file = kw_file )
       # sys.stdout.write( header + string + "\n\r" )
       # sys.stdout.flush( )
+   # def write
 
    def promt( self, string: str = "Press any key...", **kwargs ):
       kw_mask = kwargs.get( "mask", None )
@@ -193,6 +211,7 @@ class AnsiDebug:
          return pwinput.pwinput( prompt = message, mask = kw_mask )
       else:
          return input( message )
+   # def promt
 
    def promt_dep( self, string: str = "Press any key...", **kwargs ):
       kw_type = kwargs.get( "type", "show" )
@@ -222,16 +241,23 @@ class AnsiDebug:
       message = Format.PROMT + string + Format.RESET if self.__is_colored else string
 
       return caller( message )
+   # def promt_dep
 
-   def colored( self, is_colored: bool ):
+   def colored( self, value: bool ):
       _is_colored = self.__is_colored
-      self.__is_colored = is_colored
+      self.__is_colored = value
       return _is_colored
+   # def colored
 
-   __is_colored: bool = True
-   __inspect: int = 0
+   def timestamp( self, value: bool ):
+      _timestamp = self.__timestamp
+      self.__timestamp = value
+      return _timestamp
+   # def timestamp
 
-printf            = AnsiDebug( True, 0 )
-debug             = AnsiDebug( True, 1 )
+# class AnsiDebug
+
+printf            = AnsiDebug( inspect = 0 )
+debug             = AnsiDebug( inspect = 1 )
 
 
