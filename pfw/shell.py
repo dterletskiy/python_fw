@@ -809,7 +809,8 @@ class CmdLine:
    # def add_parameters
 
    def as_string( self ):
-      return shlex.join( [self.__command] + self.__parameters )
+      # return shlex.join( [self.__command] + self.__parameters )
+      return self.__command + " " + shlex.join( self.__parameters )
    # def as_string
 
    def execute( self, **kwargs ):
