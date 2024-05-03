@@ -483,6 +483,11 @@ def build_command( command, *argv, **kwargs ):
 #              ]
 #        }
 #     processor - function what will called for each line generated in output in runtime
+#     result - If a variable of type dictionary is passed as this argument to the function,
+#        then this variable will be modified as a result of the function execution.
+#        In particular:
+#           - the transferred dictionary will be expanded with the key “output”,
+#              the value of which will be a string containing the output of the command (the same as return result["output"])
 def run_and_wait_with_status2( command: str, *argv, **kwargs ):
    global COMMAND_LOG_FILE
 
@@ -505,6 +510,7 @@ def run_and_wait_with_status2( command: str, *argv, **kwargs ):
    kw_print_command = kwargs.get( "print_command", True )               # bool
    kw_store_command = kwargs.get( "store_command", COMMAND_LOG_FILE )   # str
    kw_processor = kwargs.get( "processor", None )                       # function( str )
+   kw_result = kwargs.get( "result", None )
 
 
 
@@ -663,6 +669,7 @@ def run_and_wait_with_status2( command: str, *argv, **kwargs ):
                      # output_decoded = output.strip( ).decode( encoding = 'utf-8', errors = 'ignore' )
                      output_decoded = output.decode( encoding = 'utf-8', errors = 'ignore' )
                      result_output += output_decoded
+                     if isinstance( kw_result, dict ): kwargs["result"]["output"] = result_output
                      if kw_processor: kw_processor( output_decoded )
 
                if sys.stdin in r:
@@ -697,6 +704,7 @@ def run_and_wait_with_status2( command: str, *argv, **kwargs ):
                      # output_decoded = output.strip( ).decode( encoding = 'utf-8', errors = 'ignore' )
                      output_decoded = output.decode( encoding = 'utf-8', errors = 'ignore' )
                      result_output += output_decoded
+                     if isinstance( kw_result, dict ): kwargs["result"]["output"] = result_output
                      if kw_processor: kw_processor( output_decoded )
 
                if process.stderr.fileno( ) in r:
@@ -709,6 +717,7 @@ def run_and_wait_with_status2( command: str, *argv, **kwargs ):
                      # output_decoded = output.strip( ).decode( encoding = "utf-8" )
                      output_decoded = output.decode( encoding = "utf-8" )
                      result_output += output_decoded
+                     if isinstance( kw_result, dict ): kwargs["result"]["output"] = result_output
                      if kw_processor: kw_processor( output_decoded )
 
                if sys.stdin in r:
