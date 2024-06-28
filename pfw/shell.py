@@ -220,7 +220,7 @@ def run_and_wait_with_status( command: str, *argv, **kwargs ):
          if None != kw_sudo_pwd:
             command_line_list = [ "echo", f"\"{kw_sudo_pwd}\"", "|" ] + command_line_list
 
-      command_line_string: str = f"cd {kw_cwd};" if kw_cwd else f""
+      command_line_string: str = f"cd {kw_cwd}; " if kw_cwd else f""
       command_line_string += ' '.join( command_line_list )
 
       return { "list": command_line_list, "string": command_line_string }
@@ -589,7 +589,7 @@ def run_and_wait_with_status2( command: str, *argv, **kwargs ):
          if None != kw_sudo_pwd:
             command_line = f"echo -e {shlex.quote( kw_sudo_pwd )} | {command_line}"
 
-      command_line: str = f"cd {kw_cwd}; {command_line}" if kw_cwd else command_line
+      command_line: str = f"cd {kw_cwd} ; {command_line}" if kw_cwd else command_line
 
       return command_line
    # def command_builder

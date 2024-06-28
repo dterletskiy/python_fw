@@ -18,6 +18,11 @@ class Holder:
       if match := re.match( "function=<function (.+) at 0x([0-9a-f]+)>", f"{function=}" ):
          self.__name = match.group(1)
          self.__address = f"0x{match.group(2)}"
+      elif match := re.match( "function=<bound method (.+) of <(.+) object at 0x([0-9a-f]+)>>", f"{function=}" ):
+         self.__name = f"{match.group(2)}:{match.group(1)}"
+         self.__address = f"0x{match.group(3)}"
+      else:
+         pfw.console.debug.warning( f"Can't parse function: {function=}" )
    # def __init__
 
    def __del__( self ):
