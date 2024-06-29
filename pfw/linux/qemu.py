@@ -23,7 +23,7 @@ def init( qemu_path: str ):
 def qemu( emulator: str, **kwargs ):
    kw_qemu_path = kwargs.get( "qemu_path", None )
 
-   kw_qemu_path = EMULATOR if not kw_qemu_path
+   kw_qemu_path = kw_qemu_path if kw_qemu_path else EMULATOR
 
    return os.path.join( kw_qemu_path, emulator )
 # def qemu
