@@ -56,11 +56,13 @@ class Repo:
       kw_structure = kwargs.get( "structure", False ) # if this parameter is set to 'True' repo will be cloned to <directory>/<remote>/<user>/<name>
       kw_name = kwargs.get( "name", None )
       kw_depth = kwargs.get( "depth", None )
+      kw_single_branch = kwargs.get( "single_branch", False )
 
       self.__url = kw_url
       self.__branch = kw_branch
       self.__depth = kw_depth
       self.__name = kw_name
+      self.__single_branch = kw_single_branch
       self.__directory = os.path.join( kw_directory, "/".join( build_structire( kw_url ) ) ) if kw_structure else kw_directory
 
       pfw.shell.execute( f"mkdir -p {self.__directory}", output = pfw.shell.eOutput.PTY )
@@ -88,11 +90,12 @@ class Repo:
       tabulations: int = kwargs.get( "tabulations", 0 )
       kw_msg = kwargs.get( "msg", "" )
       pfw.console.debug.info( f"{kw_msg} (type {self.__class__.__name__}):", tabs = ( tabulations + 0 ) )
-      pfw.console.debug.info( "url:          \'", self.__url, "\'", tabs = ( tabulations + 1 ) )
-      pfw.console.debug.info( "branch:       \'", self.__branch, "\'", tabs = ( tabulations + 1 ) )
-      pfw.console.debug.info( "depth:        \'", self.__depth, "\'", tabs = ( tabulations + 1 ) )
-      pfw.console.debug.info( "directory:    \'", self.__directory, "\'", tabs = ( tabulations + 1 ) )
-      pfw.console.debug.info( "name:         \'", self.__name, "\'", tabs = ( tabulations + 1 ) )
+      pfw.console.debug.info( "url:             \'", self.__url, "\'", tabs = ( tabulations + 1 ) )
+      pfw.console.debug.info( "branch:          \'", self.__branch, "\'", tabs = ( tabulations + 1 ) )
+      pfw.console.debug.info( "depth:           \'", self.__depth, "\'", tabs = ( tabulations + 1 ) )
+      pfw.console.debug.info( "single-branch:   \'", self.__single_branch, "\'", tabs = ( tabulations + 1 ) )
+      pfw.console.debug.info( "directory:       \'", self.__directory, "\'", tabs = ( tabulations + 1 ) )
+      pfw.console.debug.info( "name:            \'", self.__name, "\'", tabs = ( tabulations + 1 ) )
    # def info
 
    def url( self ):
@@ -106,6 +109,10 @@ class Repo:
    def depth( self ):
       return self.__depth
    # def depth
+
+   def single_branch( self ):
+      return self.__single_branch
+   # def single_branch
 
    def directory( self ):
       return self.__directory
@@ -141,6 +148,7 @@ class Repo:
       command = "git clone"
       command += f" --recursive"
       command += f" --depth {self.__depth}" if self.__depth not in [ None, 0 ] else ""
+      command += f" --single-branch" if self.__single_branch else ""
       command += f" --branch {self.__branch}" if None != self.__branch else ""
       command += f" {self.__url}"
       command += f" {self.__directory}"
