@@ -205,6 +205,7 @@ class Repo:
    __depth: int = None
    __directory: str = None
    __name: str = None
+   __single_branch: bool = False
 # class Repo
 
 
