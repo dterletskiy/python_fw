@@ -34,11 +34,29 @@ class ConfigurationFormatError( Exception ):
 
 
 class Processor:
+   """
+   This class is for yaml file processing.
+   After yaml file is processed data structure is created.
+   Any yaml file node could be accessed using complex dictionary access rules.
+
+   Parameters:
+      root_nodes - lits of the root nodes what will be accepted for building data.
+         Other root nodes will be ignored.
+         If value is 'None' - all root nodes will be accepted except of 'variables'.
+         Default value is 'None'.
+      critical_variables - list of the variables name what must be defined in the root node 'variables'.
+         Default value is empty list.
+      gen_dir - directory to store merged and processed yaml filed generated from built structure.
+         If value is 'None' - files will not be generated.
+         Default value is 'None'.
+   """
+
    def __init__( self, file: str, **kwargs ):
-      kw_root_nodes = kwargs.get( "root_nodes", [ ] )
+      kw_root_nodes = kwargs.get( "root_nodes", None )
       kw_critical_variables = kwargs.get( "critical_variables", [ ] )
       kw_gen_dir = kwargs.get( "gen_dir", None )
       kw_verbose = kwargs.get( "verbose", False )
+      kw_postprocessor = kwargs.get( "postprocessor", None )
 
       def read_file( file, spaces: str = "" ):
          pattern: str = r"^(\s*)include:\s*\"(.*)\"\s*$"
@@ -65,24 +83,31 @@ class Processor:
       yaml_data = yaml.load( yaml_lines, Loader = yaml.SafeLoader )
       # yaml_stream = yaml.compose( yaml_fd )
 
-      # Read "variables" section from yaml file
+      # Read "variables" root node section from yaml file
       self.__variables = yaml_data.get( "variables", { } )
+      # Read rest of the root nodes
+      if None == kw_root_nodes:
+         kw_root_nodes = yaml_data.keys( )
+      for root_node in kw_root_nodes:
+         if "variables" == root_node:
+            continue
+         self.__root_nodes[ root_node ] = yaml_data.get( root_node, { } )
 
       # Override some fields according to "config" file or command line
-      # Here must be replaced values for some variable like in is done in "umbs" project
-
-      # Substitute valiables' values
-      self.__process_yaml_data( self.__variables )
+      if kw_postprocessor: kw_postprocessor( self )
 
       # Test critical variables
       for critical_variable in kw_critical_variables:
+         pfw.console.debug.warning( f"Testing critical variable '{critical_variable}'" )
          if None == self.get_variable( critical_variable ):
             raise ConfigurationFormatError(
                   f"Variable '{critical_variable}' must be defined"
                )
 
-      for root_node in kw_root_nodes:
-         self.__root_nodes[ root_node ] = yaml_data.get( root_node, { } )
+      # Substitute variables' values in the 'variables' node
+      self.__process_yaml_data( self.__variables )
+      # Substitute the rest of variables' values in the other nodes
+      for root_node in self.__root_nodes:
          self.__process_yaml_data( self.__root_nodes[ root_node ] )
 
       if kw_verbose:
