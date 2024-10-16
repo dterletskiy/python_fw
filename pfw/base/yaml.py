@@ -31,6 +31,15 @@ class ConfigurationFormatError( Exception ):
       pfw.console.debug.error( f"{self.__class__}: {self.message}" )
 # class ConfigurationFormatError
 
+class ParameterError( Exception ):
+   def __init__( self, message ):
+      self.message = message
+      super( ).__init__( self.message )
+
+   def __str__( self ):
+      pfw.console.debug.error( f"{self.__class__}: {self.message}" )
+# class ParameterError
+
 
 
 class Processor:
@@ -51,12 +60,19 @@ class Processor:
          Default value is 'None'.
    """
 
-   def __init__( self, file: str, **kwargs ):
+   def __init__( self, **kwargs ):
+      kw_file = kwargs.get( "file", None )
+      kw_string = kwargs.get( "string", None )
       kw_root_nodes = kwargs.get( "root_nodes", None )
       kw_critical_variables = kwargs.get( "critical_variables", [ ] )
       kw_gen_dir = kwargs.get( "gen_dir", None )
       kw_verbose = kwargs.get( "verbose", False )
       kw_postprocessor = kwargs.get( "postprocessor", None )
+
+      if None == kw_file and None == kw_string:
+         raise ParameterError( "one of the parameters 'file' or 'string' must be defined" )
+      if None != kw_file and None != kw_string:
+         raise ParameterError( "only one of the parameters 'file' or 'string' must be defined" )
 
       def read_file( file, spaces: str = "" ):
          pattern: str = r"^(\s*)include:\s*\"(.*)\"\s*$"
@@ -79,9 +95,30 @@ class Processor:
          return lines
       # def read_file
 
-      yaml_lines = read_file( file )
+      yaml_lines = read_file( kw_file ) if kw_file else kw_string
       yaml_data = yaml.load( yaml_lines, Loader = yaml.SafeLoader )
       # yaml_stream = yaml.compose( yaml_fd )
+
+      # pattern = r'\$\{(.+?)\}'
+      pattern = r'\$\{([^{}]+)\}'
+      detected = True
+      while True == detected:
+         yaml_lines_processed: str = ""
+         detected = False
+         for yaml_line in yaml_lines.split( "\n" ):
+            if findall := re.findall( pattern, yaml_line ):
+               detected = True
+               for item in findall:
+                  value = pfw.base.dict.get_value( yaml_data, f"variables.{item}", None, verbose = True )
+                  if None == value:
+                     pfw.console.debug.error( yaml_line )
+                     raise YamlFormatError( f"no variable name '{item}'" )
+                  yaml_line = yaml_line.replace( "${" + item + "}", str(value) )
+            yaml_lines_processed += yaml_line + "\n"
+         yaml_lines = yaml_lines_processed
+
+      yaml_data = yaml.load( yaml_lines, Loader = yaml.SafeLoader )
+
 
       # Read "variables" root node section from yaml file
       self.__variables = yaml_data.get( "variables", { } )
@@ -104,20 +141,19 @@ class Processor:
                   f"Variable '{critical_variable}' must be defined"
                )
 
-      # Substitute variables' values in the 'variables' node
-      self.__process_yaml_data( self.__variables )
-      # Substitute the rest of variables' values in the other nodes
-      for root_node in self.__root_nodes:
-         self.__process_yaml_data( self.__root_nodes[ root_node ] )
-
       if kw_verbose:
          self.info( )
 
+      self.__merged_yaml = None
+      self.__processed_yaml = None
       if kw_gen_dir:
-         timestamp = datetime.datetime.now( ).strftime( "%Y-%m-%d_%H-%M-%S" )
-         with open( f"{kw_gen_dir}/merged_{timestamp}.yaml", "w" ) as f:
+         pfw.shell.execute( f"mkdir -p {kw_gen_dir}" )
+         timestamp = datetime.datetime.now( ).strftime( "%Y-%m-%d_%H-%M-%S-%f" )
+         self.__merged_yaml = f"{kw_gen_dir}/merged_{timestamp}.yaml"
+         self.__processed_yaml = f"{kw_gen_dir}/processed_{timestamp}.yaml"
+         with open( self.__merged_yaml, "w" ) as f:
             f.write( yaml_lines )
-         with open( f"{kw_gen_dir}/processed_{timestamp}.yaml", "w" ) as f:
+         with open( self.__processed_yaml, "w" ) as f:
             data: dict = { "variables": self.__variables }
             data.update( self.__root_nodes )
             yaml.dump( data, f )
@@ -156,85 +192,13 @@ class Processor:
       return self.__root_nodes[ root_node_name ]
    # def get_root_node
 
+   def merged_yaml( self ):
+      return self.__merged_yaml
+   # def merged_yaml
 
-
-   class AV:
-      def __init__( self, a, v ):
-         self.address = copy.deepcopy( a )
-         self.value = copy.deepcopy( v )
-      # def __init__
-
-      def __del__( self ):
-         pass
-      # def __del__
-
-      address: list = [ ]
-      value = None
-   # class AV
-
-   def __replace( self, value ):
-      # pfw.console.debug.trace( f"processing value: '{value}'" ) # @TDA: debug
-
-      if not isinstance( value, str ):
-         pfw.console.debug.warning( f"ERROR: '{value}' is not a string, it is {type( value )}" )
-         return ( False, value )
-
-      replaced: bool = False
-      if findall := re.findall( r'\$\{(.+?)\}', value ):
-         # pfw.console.debug.trace( f"findall: '{findall}'" ) # @TDA: debug
-         for item in findall:
-            variable = self.get_variable( item )
-            # pfw.console.debug.trace( f"{item} -> {variable} ({type(variable)})" ) # @TDA: debug
-            if isinstance( variable, str ) or isinstance( variable, int ) or isinstance( variable, float ):
-               value = value.replace( "${" + item + "}", str(variable) )
-            elif isinstance( variable, list ) or isinstance( variable, tuple ) or isinstance( variable, dict ):
-               if value == "${" + f"{item}" + "}":
-                  value = variable
-               else:
-                  pfw.console.debug.error( "can substitute only single variable without any other characters by list, tuple or map" )
-                  raise YamlFormatError( f"Wrong yaml format error for substitutuion variable '{item}'" )
-
-         if isinstance( value, str ):
-            value = self.__replace( value )[1]
-
-         replaced = True
-
-      return ( replaced, value )
-   # def __replace
-
-   def __walk( self, iterable, address: list, value_processor = None ):
-      # pfw.console.debug.info( f"-> address = {address}" ) # @TDA: debug
-
-      for_adaptation: list = [ ]
-      if isinstance( iterable, dict ):
-         for key, value in iterable.items( ):
-            address.append( key )
-            for_adaptation.extend( self.__walk( value, address, value_processor ) )
-            del address[-1]
-      elif isinstance( iterable, list ) or isinstance( iterable, tuple ):
-         for index, item in enumerate( iterable ):
-            address.append( index )
-            for_adaptation.extend( self.__walk( item, address, value_processor ) )
-            del address[-1]
-      elif isinstance( iterable, str ):
-         ( replaced, new_value ) = value_processor( iterable )
-         if replaced:
-            # print( f"address = {address}" ) # @TDA: debug
-            # print( f"old_value = {iterable}" ) # @TDA: debug
-            # print( f"new_value = {new_value}" ) # @TDA: debug
-            for_adaptation.append( Processor.AV( address, new_value ) )
-      else:
-         pass
-
-      # pfw.console.debug.info( f"<- address = {address}" ) # @TDA: debug
-
-      return for_adaptation
-   # def __walk
-
-   def __process_yaml_data( self, yaml_data ):
-      for item in self.__walk( yaml_data, [ ], self.__replace ):
-         pfw.base.dict.set_value_by_list_of_keys( yaml_data, item.address, item.value )
-   # def __process_yaml_data
+   def processed_yaml( self ):
+      return self.__processed_yaml
+   # def processed_yaml
 
 
 
