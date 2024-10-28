@@ -6,6 +6,9 @@ import pfw.console
 
 
 class Size:
+   class FormatError( TypeError ): pass
+   class ParameterError( TypeError ): pass
+
    class eGran( enum.IntEnum ):
       B = 1024 ** 0
       K = 1024 ** 1
@@ -48,11 +51,15 @@ class Size:
    # def __str__
 
    def __add__( self, other ):
+      if not isinstance( other, Size ):
+         raise Size.ParameterError( "'__add__' operations allowed only with 'Size' types" )
       size_bytes = self.__bytes + other.__bytes
       return Size( size_bytes, Size.eGran.B )
    # def __add__
 
    def __sub__( self, other ):
+      if not isinstance( other, Size ):
+         raise Size.ParameterError( "'__sub__' operations allowed only with 'Size' types" )
       size_bytes = self.__bytes - other.__bytes
       if 0 > size_bytes:
          size_bytes = 0
@@ -60,16 +67,34 @@ class Size:
    # def __sub__
 
    def __iadd__( self, other ):
+      if not isinstance( other, Size ):
+         raise Size.ParameterError( "'__iadd__' operations allowed only with 'Size' types" )
       self.__bytes += other.__bytes
       return self
    # def __iadd__
 
    def __isub__( self, other ):
+      if not isinstance( other, Size ):
+         raise Size.ParameterError( "'__isub__' operations allowed only with 'Size' types" )
       self.__bytes -= other.__bytes
       if 0 > self.__bytes:
          self.__bytes = 0
       return self
    # def __isub__
+
+   def __mul__( self, other ):
+      if not isinstance( other, int ):
+         raise Size.ParameterError( "'__mul__' operations allowed only with 'int' types" )
+      self.__bytes = self.__bytes * other
+      return self
+   # def __mul__
+
+   def __truediv__( self, other ):
+      if not isinstance( other, int ):
+         raise Size.ParameterError( "'__truediv__' operations allowed only with 'int' types" )
+      self.__bytes = self.__bytes // other
+      return self
+   # def __truediv__
 
    def __gt__( self, other ):
       if self.__bytes > other.__bytes:

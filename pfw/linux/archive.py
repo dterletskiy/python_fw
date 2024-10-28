@@ -12,6 +12,8 @@ def pack( archive: str, format: str, *argv, **kwargs ):
       return pack_tar( archive, format, *argv, **kwargs )
    elif format in zip_format_list:
       return pack_zip( archive, *argv, **kwargs )
+   pfw.console.debug.error( f"Unsuported format '{format}'" )
+   return False
 # def pack
 
 def unpack( archive: str, to: str, format: str, *argv, **kwargs ):
@@ -19,6 +21,8 @@ def unpack( archive: str, to: str, format: str, *argv, **kwargs ):
       return unpack_tar( archive, to, format, *argv, **kwargs )
    elif format in zip_format_list:
       return unpack_zip( archive, to, *argv, **kwargs )
+   pfw.console.debug.error( f"Unsuported format '{format}'" )
+   return False
 # def unpack
 
 def detect_type( archive: str, **kwargs ):

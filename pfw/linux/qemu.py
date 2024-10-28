@@ -21,9 +21,7 @@ def init( qemu_path: str ):
 
 # This function return full path to the emulator
 def qemu( emulator: str, **kwargs ):
-   kw_qemu_path = kwargs.get( "qemu_path", None )
-
-   kw_qemu_path = kw_qemu_path if kw_qemu_path else EMULATOR
+   kw_qemu_path = kwargs.get( "qemu_path", EMULATOR )
 
    return os.path.join( kw_qemu_path, emulator )
 # def qemu

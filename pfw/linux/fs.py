@@ -89,7 +89,7 @@ class FileSystem:
 
       command += f" {device}"
 
-      return 0 == pfw.shell.execute( command, sudo = True, output = pfw.shell.eOutput.PTY )["code"]
+      return 0 == pfw.shell.execute( command, sudo = True )["code"]
    # def format
 
 

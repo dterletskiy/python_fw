@@ -57,12 +57,14 @@ class Repo:
       kw_name = kwargs.get( "name", None )
       kw_depth = kwargs.get( "depth", None )
       kw_single_branch = kwargs.get( "single_branch", False )
+      kw_recursive = kwargs.get( "recursive", True )
 
       self.__url = kw_url
       self.__branch = kw_branch
       self.__depth = kw_depth
       self.__name = kw_name
       self.__single_branch = kw_single_branch
+      self.__recursive = kw_recursive
       self.__directory = os.path.join( kw_directory, "/".join( build_structire( kw_url ) ) ) if kw_structure else kw_directory
 
       pfw.shell.execute( f"mkdir -p {self.__directory}", output = pfw.shell.eOutput.PTY )
@@ -140,13 +142,13 @@ class Repo:
       return 0 == result["code"]
    # def is_repo
 
-   def clone( self ):
+   def clone( self, **kwargs ):
       if self.is_repo( directory = self.__directory ):
          pfw.console.debug.error( f"directory '{self.__directory}' already contains git repository" )
          return False
 
       command = "git clone"
-      command += f" --recursive"
+      command += f" --recursive" if self.__recursive else ""
       command += f" --depth {self.__depth}" if self.__depth not in [ None, 0 ] else ""
       command += f" --single-branch" if self.__single_branch else ""
       command += f" --branch {self.__branch}" if None != self.__branch else ""
@@ -206,6 +208,7 @@ class Repo:
    __directory: str = None
    __name: str = None
    __single_branch: bool = False
+   __recursive: bool = False
 # class Repo
 
 

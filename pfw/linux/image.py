@@ -30,6 +30,7 @@ class Partition:
       kw_fs = kwargs.get( "fs", None )
       kw_label = kwargs.get( "label", None )
       kw_bootable = kwargs.get( "bootable", False )
+      kw_esp = kwargs.get( "esp", False )
       kw_clone_from = kwargs.get( "clone_from", None )
 
       kw_clone_from_size = None
@@ -43,7 +44,7 @@ class Partition:
       if kw_start and kw_end:
          kw_start_end_size = kw_end - kw_start + pfw.size.SizeMegabyte
 
-      partition_size = None
+      partition_size = pfw.size.SizeZero
       if kw_start_end_size and kw_clone_from_size:
          if kw_start_end_size < kw_clone_from_size:
             pfw.console.debug.error( "size mismatch between clone size file and end-start positions" )
@@ -55,7 +56,8 @@ class Partition:
       elif kw_size:
          partition_size = kw_size
       else:
-         raise ParameterError
+         pfw.console.debug.error( "size was not calculated" )
+         # raise ParameterError
 
       self.__size = partition_size
       self.__start = kw_start
@@ -133,7 +135,11 @@ class Partition:
 
    def reset_bootable( self ):
       self.__bootable = False
-   # def bootable
+   # def reset_bootable
+
+   def esp( self ):
+      return self.__esp
+   # def esp
 
    def clone_from( self ):
       return self.__clone_from
@@ -147,6 +153,7 @@ class Partition:
    __fs: pfw.linux.fs.FileSystem = None
    __label: str = None
    __bootable: bool = False
+   __esp: bool = False
    __clone_from: str = None
 # class Partition
 
@@ -278,7 +285,7 @@ def mount( image_file: str, **kwargs ):
    kw_fs = kwargs.get( "fs", None )
 
    if not os.path.exists( kw_mount_point ):
-      result_code = pfw.shell.execute( f"mkdir -p {kw_mount_point}", sudo = True, output = pfw.shell.eOutput.PTY )["code"]
+      result_code = pfw.shell.execute( f"mkdir -p {kw_mount_point}", sudo = True )["code"]
       if 0 != result_code:
          pfw.console.debug.error( "create directory '%s' error: %d" % ( kw_mount_point, result_code ) )
          return None
@@ -287,7 +294,7 @@ def mount( image_file: str, **kwargs ):
    command += f" -t {kw_fs}" if kw_fs else ""
    command += f" {image_file} {kw_mount_point}"
    command += f" -o loop"
-   result_code = pfw.shell.execute( command, sudo = True, output = pfw.shell.eOutput.PTY )["code"]
+   result_code = pfw.shell.execute( command, sudo = True )["code"]
    if 0 != result_code:
       pfw.console.debug.error( "mount image file '%s' to directory '%s' error: '%s'" % ( image_file, kw_mount_point, result_code ) )
       return None
@@ -300,7 +307,7 @@ def umount( file: str, **kwargs ):
       pfw.console.debug.warning( "Mountpoint (or image file) is not defined" )
       return False
 
-   result_code = pfw.shell.execute( f"umount {file}", sudo = True, output = pfw.shell.eOutput.PTY )["code"]
+   result_code = pfw.shell.execute( f"umount {file}", sudo = True )["code"]
    if 0 != result_code:
       pfw.console.debug.error( "umount file '%s' error: '%s'" % ( file, result_code ) )
       return False
@@ -309,7 +316,7 @@ def umount( file: str, **kwargs ):
 # def umount
 
 def mounted_to( file: str, **kwargs ):
-   result = pfw.shell.execute( f"mount | grep {file}", sudo = True, output = pfw.shell.eOutput.PTY )
+   result = pfw.shell.execute( f"mount | grep {file}" )
 
    if 0 != result["code"]:
       return None
@@ -324,18 +331,18 @@ def mounted_to( file: str, **kwargs ):
 # def mounted_to
 
 def attach( file: str, **kwargs ):
-   result = pfw.shell.execute( f"losetup --find --show --partscan {file}", sudo = True, output = pfw.shell.eOutput.PTY )
+   result = pfw.shell.execute( f"losetup --find --show --partscan {file}", sudo = True )
    if 0 != result["code"]:
       pfw.console.debug.error( "attach file '%s' error: '%s'" % ( file, result["code"] ) )
       return None
 
-   loop_device = result["output"].split( "\r\n" )[0]
+   loop_device = result["output"].split( "\n" )[0]
    pfw.console.debug.info( "file '%s' attached to '%s'" % ( file, loop_device ) )
    return loop_device
 # def attach
 
 def detach( loop_device: str, **kwargs ):
-   result_code = pfw.shell.execute( f"losetup --detach {loop_device}", sudo = True, output = pfw.shell.eOutput.PTY )["code"]
+   result_code = pfw.shell.execute( f"losetup --detach {loop_device}", sudo = True )["code"]
    if 0 != result_code:
       pfw.console.debug.error( "detach device '%s' error: '%s'" % ( loop_device, result_code ) )
       return False
@@ -345,16 +352,24 @@ def detach( loop_device: str, **kwargs ):
 # def detach
 
 def attached_to( file: str, **kwargs ):
-   result = pfw.shell.execute( f"losetup --list | grep {file}", sudo = True, output = pfw.shell.eOutput.PTY )
+   result = pfw.shell.execute( f"losetup --list | grep {file}", sudo = True )
 
    if 0 != result["code"]:
       return None
 
-   match = re.match( rf"^(\S+)\s+\d+\s+\d+\s+\d+\s+\d+\s+{file}\s+.+$", result["output"] )
-   if match:
-      loop_device = match.group( 1 )
-      pfw.console.debug.info( f"image '{file}' attached to '{loop_device}'" )
-      return loop_device
+   # In some cases result could containe several strings with deprecated information
+   # about previously attached images and deleted.
+   # In this case output could looks like:
+   # /dev/loop34         0      0         0  0 /mnt/tmp.img                    0     512
+   # /dev/loop3          0      0         1  0 /mnt/tmp.img (deleted)          0     512
+   # In this case we should iterate each string and find approprite information
+   losetup_output = result["output"].split( "\n" )
+   for item in losetup_output:
+      match = re.match( rf"^(\S+)\s+\d+\s+\d+\s+\d+\s+\d+\s+{file}\s+.+$", item )
+      if match:
+         loop_device = match.group( 1 )
+         pfw.console.debug.info( f"image '{file}' attached to '{loop_device}'" )
+         return loop_device
 
    return None
 # def mounted_to
@@ -394,16 +409,14 @@ def map( file: str, **kwargs ):
 # def map
 
 def info( image_file: str, **kwargs ):
-   result = pfw.shell.execute( f"parted {image_file} unit b print", sudo = True, output = pfw.shell.eOutput.PTY )
-
    # https://unix.stackexchange.com/a/438308
-   result = pfw.shell.execute( f"parted -m {image_file} unit b print", sudo = True, output = pfw.shell.eOutput.PTY )
+   result = pfw.shell.execute( f"parted -m {image_file} unit b print", sudo = True )
 
    if 0 != result["code"]:
       pfw.console.debug.error( f"parted '{image_file}' information error" )
       return None
 
-   parted_output = result["output"].split( "\r\n" )
+   parted_output = result["output"].split( "\n" )
 
    pattern: dict = {
       "error": r"^Error:\s+(.*)$",
@@ -507,6 +520,9 @@ def init_device( file: str, device: Device, **kwargs ):
       if partition.bootable( ):
          pfw.shell.execute( f"parted {loop_device} set {index + 1} boot on", sudo = True )
 
+      if partition.esp( ):
+         pfw.shell.execute( f"parted {loop_device} set {index + 1} esp on", sudo = True )
+
       # pfw.shell.execute( f"parted {loop_device} print {index + 1}", sudo = True )
       pfw.shell.execute( f"parted {loop_device} -s print unit s", sudo = True )
       # pfw.shell.execute( f"partprobe {loop_device}", sudo = True )
@@ -528,15 +544,52 @@ def init_device( file: str, device: Device, **kwargs ):
 
 # Examples:
 
-# image_file = "/mnt/img/tmp/tmp.img"
+# import pfw.size
+# import pfw.linux.fs
+# import pfw.linux.image
 
-# pfw.linux.image.create( image_file, pfw.size.SizeGigabyte )
+# partition_0 = pfw.linux.image.Partition(
+#       size = pfw.size.Size( 1, pfw.size.Size.eGran.G ),
+#       fs = pfw.linux.fs.builder( "fat32" ),
+#       label = "ESP",
+#       bootable = True,
+#       esp = True
+#    )
+# partition_1 = pfw.linux.image.Partition(
+#       size = pfw.size.Size( 1, pfw.size.Size.eGran.G ),
+#       fs = pfw.linux.fs.builder( "ext4" ),
+#       label = "system"
+#    )
+# partition_2 = pfw.linux.image.Partition(
+#       size = pfw.size.Size( 1, pfw.size.Size.eGran.G ),
+#       fs = pfw.linux.fs.builder( "ext4" ),
+#       label = "data"
+#    )
+
+# device = pfw.linux.image.Device(
+#       partitions = [
+#          partition_0,
+#          partition_1,
+#          partition_2
+#       ]
+#    )
+# device.info( )
+
+# image_file = "/mnt/dev/docker/builder/images/tmp.img"
+# image_file = "/mnt/dev/docker/builder/images/drive/install/main.img"
+
+# pfw.linux.image.create( image_file, pfw.size.Size( 5, pfw.size.Size.eGran.G ) )
 # attached_to = pfw.linux.image.attach( image_file )
 # attached_to_test = pfw.linux.image.attached_to( image_file )
 # if attached_to != attached_to_test:
 #    pfw.console.debug.error( f"{attached_to} != {attached_to_test}" )
-# attached_to = pfw.linux.image.detach( attached_to )
+# pfw.console.debug.promt( )
+# pfw.linux.image.detach( attached_to_test )
 
-# image = pfw.linux.image.info( image_file )
-# image.info( )
-# pfw.linux.image.init_device( "/mnt/img/tmp/main.img", image )
+# # creating image
+# pfw.linux.image.init_device( image_file, device )
+
+# # cloning image
+# cloned_device = pfw.linux.image.info( image_file )
+# cloned_device.info( )
+# pfw.linux.image.init_device( f"{image_file}_clone", cloned_device )
