@@ -1,4 +1,5 @@
 import enum
+import re
 
 import pfw.base.struct
 import pfw.console
@@ -205,7 +206,7 @@ SizeSector     = Size( 1, Size.eGran.S )
 
 
 # Converting test size dimention reprsentation to corresponding Size.eGran value
-def text_to_size( text: str, **kwargs ):
+def text_to_granularity( text: str, **kwargs ):
    text_to_gran = {
       "B": pfw.size.Size.eGran.B,
       "KB": pfw.size.Size.eGran.K,
@@ -221,7 +222,25 @@ def text_to_size( text: str, **kwargs ):
       return None
 
    return kw_dimentions[ text ]
-# def text_to_size
+# def text_to_granularity
+
+def string_to_size( string, **kwargs ):
+   match = re.match( r'(\d+[.]?\d*)\s*(\w+)', string )
+   if not match:
+      pfw.console.debug.error( f"format error" )
+      return None
+
+   size = float( match.group( 1 ) )
+   granularity = text_to_granularity( match.group( 2 ) )
+
+   if not granularity:
+      pfw.console.debug.error( f"dimention error" )
+      return None
+
+   return Size( size, granularity )
+
+# def string_to_size
+
 
 
 def min( *argv ):
