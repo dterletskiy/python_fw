@@ -153,7 +153,9 @@ class ConfigurationData:
 
 class ConfigurationContainer:
    def __init__( self, data_list: list = [ ], **kwargs ):
-      self.__list = copy.deepcopy( data_list )
+      self.__map = { }
+      for data in data_list:
+         self.__map[ data.get_name( ) ] = copy.deepcopy( data )
    # def __init__
 
    def __del__( self ):
@@ -176,30 +178,25 @@ class ConfigurationContainer:
 
    def info( self, **kwargs ):
       print( self.__class__.__name__, ":" )
-      for data in self.__list:
+      for name, data in self.__map.items( ):
          data.info( )
+         print( );
    # def info
 
 
 
-   def set_data( self, name: str, data: ConfigurationData ):
-      self.__list.append( data )
+   def set_data( self, data: ConfigurationData ):
+      if data.get_name( ) in self.__map.keys( ):
+         print( f"update (rewrite) existing data with name '{data.get_name( )}'" )
+      self.__map[ data.get_name( ) ] = data
    # def set_data
 
    def get_data( self, name: str ):
-      for data in self.__list:
-         if data.get_name( ) == name:
-            return data
-
-      return None
+      return self.__map.get( name, None )
    # def get_data
 
-   def get_data_list( self ):
-      return self.__list
-   # def get_data_list
-
    def get_names( self ):
-      return [ i.get_name( ) for i in self.__list ]
+      return self.__map.keys( )
    # def get_names
 
    def test( self, name: str ):
@@ -207,28 +204,27 @@ class ConfigurationContainer:
    # def test
 
    def delete_data( self, name: str ):
-      for index in range( len( self.__list ) ):
-         if self.__list[ index ].get_name( ) == name:
-            del self.__list[ index ]
+      if name in self.__map.keys( ):
+         del self.__map[ name ]
    # def delete_data
 
    def set_value( self, name: str, value ):
-      data = self.get_data( name )
-      if None == data:
-         data = ConfigurationData( name, False, "" )
-         self.__list.append( data )
+      if name not in self.__map.keys( ):
+         self.__map[ name ] = ConfigurationData( name, False, "" )
 
-      data.set_value( value )
+      self.__map[ name ].set_value( value )
    # def set_value
 
    def get_values( self, name: str ):
-      data = self.get_data( name )
-      return data.get_values( ) if None != data else [ ]
+      if name not in self.__map.keys( ):
+         return None
+      return self.__map[ name ].get_values( )
    # def get_values
 
    def get_value( self, name: str, index: int = 0 ):
-      data = self.get_data( name )
-      return data.get_value( index ) if None != data else None
+      if name not in self.__map.keys( ):
+         return None
+      return self.__map[ name ].get_value( )
    # def get_value
 
    def get_description( self, name: str ):
@@ -242,7 +238,7 @@ class ConfigurationContainer:
    # def get_required
 
    def is_complete( self ):
-      for data in self.__list:
+      for name, data in self.__map.items( ):
          if False == data.is_satisfy( ):
             return False
 
@@ -251,7 +247,7 @@ class ConfigurationContainer:
 
 
 
-   __list: list = [ ]
+   __map: dict = { }
 # class ConfigurationContainer
 
 
@@ -278,8 +274,9 @@ def process_cmdline( app_data, argv ):
 
    parser.add_argument( "--component", dest = "component", type = str, action = "store", required = False, default = "*", help = app_data.get_description( "component" ) )
    parser.add_argument( "--action", dest = "action", type = str, action = "store", required = False, default = "*", help = app_data.get_description( "action" ) )
+   parser.add_argument( "--target", dest = "target", type = str, action = "append", required = False, help = app_data.get_description( "target" ) )
+   parser.add_argument( "--container", dest = "container", type = str, action = "store", required = False, help = app_data.get_description( "container" ) )
 
-   parser.add_argument( "--container", dest = "container", action = "store_true", help = app_data.get_description( "container" ) )
    parser.add_argument( "--test", dest = "test", action = "store_true", help = app_data.get_description( "test" ) )
 
    # parser.print_help( )
@@ -341,9 +338,14 @@ def process_config_file( app_data ):
 
 
 
-def process_configuration( app_data, argv ):
-   process_cmdline( app_data, argv )
-   process_config_file( app_data )
+def process_configuration( app_data, argv, **kwargs ):
+   kw_process_cmdline = kwargs.get( "process_cmdline", process_cmdline )
+   kw_process_config_file = kwargs.get( "process_config_file", process_config_file )
+
+   if kw_process_cmdline: 
+      kw_process_cmdline( app_data, argv )
+   if kw_process_config_file:
+      kw_process_config_file( app_data )
 
    app_data.set_value( "application", os.path.dirname( os.path.realpath( sys.argv[0] ) ) )
    if None == app_data.get_value( "pfw" ):
@@ -395,16 +397,21 @@ def value( name: str, index: int = 0 ):
 
 
 
-def init( argv = sys.argv[1:] ):
+def init( argv = sys.argv[1:], **kwargs ):
    MIN_PYTHON = (3, 9)
    if sys.version_info < MIN_PYTHON:
       print( "Python minimal required version is %s.%s" % MIN_PYTHON )
       print( "Current version is %s.%s" % ( sys.version_info.major, sys.version_info.minor ) )
       sys.exit( 255 )
 
-   process_configuration( config, sys.argv[1:] )
+   process_configuration( config, sys.argv[1:], **kwargs )
+
+   kw_verbose = kwargs.get( "verbose", False )
+   if kw_verbose:
+      info( )
 # def init
 
 def info( ):
+   print( )
    config.info( )
 # def info
