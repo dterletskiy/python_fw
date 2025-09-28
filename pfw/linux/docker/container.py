@@ -1,5 +1,6 @@
 import os
 import re
+import json
 
 import pfw.base.struct
 import pfw.console
@@ -78,6 +79,31 @@ def commit( container_name: str, **kwargs ):
    return 0 == result["code"]
 # def commit
 
+def info( **kwargs ):
+   kw_container_name = kwargs.get( "name", None )
+
+   if not kw_container_name:
+      return None
+
+   command = f"docker ps --all --format json"
+   result = pfw.shell.execute( command, output = pfw.shell.eOutput.PTY )
+   output_list = result["output"].split( "\r\n" )
+
+   for item in output_list:
+      try:
+         data = json.loads( item )
+      except json.JSONDecodeError as e:
+         # pfw.console.debug.error( "JSON format error:" )
+         # pfw.console.debug.error( "   Message:", e.msg )
+         # pfw.console.debug.error( "   Position:", e.pos )
+         continue
+
+      if kw_container_name == data.get( "Names" ):
+         return data
+
+   return None
+# def info
+
 def test( container_name: str, **kwargs ):
    kw_test = kwargs.get( "test", "exists" )
 
@@ -105,11 +131,24 @@ def test( container_name: str, **kwargs ):
 # def test
 
 def is_exists( container_name: str, **kwargs ):
-   return test( container_name, test = "exists" )
+   """
+   This function tests if container with 'container_name' exists in the system.
+   Examples:
+      linux.docker.container.is_exists( "u20" )
+   """
+   return None != info( name = container_name )
 # def is_exists
 
 def is_started( container_name: str, **kwargs ):
-   return test( container_name, test = "started" )
+   """
+   This function tests if container with 'container_name' is running in the system.
+   Examples:
+      linux.docker.container.is_started( "u20" )
+   """
+   if data := info( name = container_name ):
+      return data.get( "State", "none" ) == "running"
+
+   return False
 # def is_started
 
 def create( container_name: str, image_name: str, **kwargs ):
@@ -121,7 +160,8 @@ def create( container_name: str, image_name: str, **kwargs ):
    kw_env = kwargs.get( "env", [ ] )
    kw_disposable = kwargs.get( "disposable", False )
 
-   if None != is_exists( container_name ):
+   if is_exists( container_name ):
+      pfw.console.debug.error( f"Container with name '{container_name}' already exists" )
       return False
 
    command: str = f"docker create"
@@ -176,7 +216,8 @@ def run( container_name: str, image_name: str, **kwargs ):
    kw_daemon = kwargs.get( "daemon", False )
    kw_command = kwargs.get( "command", None )
 
-   if None != is_exists( container_name ):
+   if is_exists( container_name ):
+      pfw.console.debug.error( f"Container with name '{container_name}' already exists" )
       return False
 
    command: str = f"docker run"

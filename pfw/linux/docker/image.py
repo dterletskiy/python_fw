@@ -1,5 +1,6 @@
 import os
 import re
+import json
 
 import pfw.console
 import pfw.shell
@@ -47,3 +48,48 @@ def rmi( image_name: str, *kwargs ):
 
    return 0 == result["code"]
 # def rmi
+
+def info( **kwargs ):
+   kw_image_name = kwargs.get( "name", None )
+
+   if not kw_image_name:
+      return None
+
+   parts = kw_image_name.split( ":", 1 )
+   image_name = parts[0]
+   image_tag = parts[1] if len( parts ) > 1 else None
+
+   command = f"docker images --format json"
+   result = pfw.shell.execute( command, output = pfw.shell.eOutput.PTY )
+   output_list = result["output"].split( "\r\n" )
+
+   for item in output_list:
+      try:
+         data = json.loads( item )
+      except json.JSONDecodeError as e:
+         # pfw.console.debug.error( "JSON format error:" )
+         # pfw.console.debug.error( "   Message:", e.msg )
+         # pfw.console.debug.error( "   Position:", e.pos )
+         continue
+
+      if image_name == data.get( "Repository" ):
+         if image_tag:
+            if image_tag == data.get( "Tag" ):
+               return data
+            else:
+               return None
+         return data
+
+   return None
+# def test
+
+def is_exists( image_name: str, **kwargs ):
+   """
+   This function tests if image with 'image_name' exists in the system.
+   'image_name' containes from 'name' and optionally from ':tag'.
+   Examples:
+      linux.docker.image.is_exists( "u20" )
+      linux.docker.image.is_exists( "u20:latest" )
+   """
+   return None != info( name = image_name )
+# def is_exists
