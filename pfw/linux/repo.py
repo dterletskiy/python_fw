@@ -55,10 +55,15 @@ class Repo:
       kw_msg = kwargs.get( "msg", "" )
       pfw.console.debug.info( f"{kw_msg} (type {self.__class__.__name__}):", tabs = ( kw_tabs + 0 ) )
 
-      pfw.console.debug.info( "tool url:          \'", self.__tool_url, "\'", tabs = ( tabulations + 1 ) )
-      pfw.console.debug.info( "tool:              \'", self.__tool, "\'", tabs = ( tabulations + 1 ) )
-      pfw.console.debug.info( "source dir:        \'", self.__source_dir, "\'", tabs = ( tabulations + 1 ) )
-      pfw.console.debug.info( "branch:            \'", self.__branch, "\'", tabs = ( tabulations + 1 ) )
+      pfw.console.debug.info( f"tool url:    '{self.__tool_url}'"          , tabs = ( kw_tabs + 1 ) )
+      pfw.console.debug.info( f"tool:        '{self.__tool}'"              , tabs = ( kw_tabs + 1 ) )
+      pfw.console.debug.info( f"source dir:  '{self.__source_dir}'"        , tabs = ( kw_tabs + 1 ) )
+      pfw.console.debug.info( f"depth:       '{self.__depth}'"             , tabs = ( kw_tabs + 1 ) )
+      pfw.console.debug.info( f"manifest:"                                 , tabs = ( kw_tabs + 1 ) )
+      pfw.console.debug.info( f"url:         '{self.__manifest_url}'"      , tabs = ( kw_tabs + 2 ) )
+      pfw.console.debug.info( f"name:        '{self.__manifest_url}'"      , tabs = ( kw_tabs + 2 ) )
+      pfw.console.debug.info( f"branch:      '{self.__manifest_branch}'"   , tabs = ( kw_tabs + 2 ) )
+      pfw.console.debug.info( f"depth:       '{self.__manifest_depth}'"    , tabs = ( kw_tabs + 2 ) )
 
       if None == self.__source_dir:
          return
@@ -75,8 +80,12 @@ class Repo:
    # def info
 
    def install( self ):
-      result = pfw.base.net.download( self.__tool_url, self.__source_dir )
-      if False == result:
+      # result = pfw.base.net.download( self.__tool_url, self.__source_dir )
+      # if False == result:
+      #    return False
+
+      result = pfw.shell.execute( f"curl {self.__tool_url} > {self.__tool}" )
+      if 0 != result["code"]:
          return False
 
       result = pfw.shell.execute( f"chmod a+x {self.__tool}" )
@@ -84,7 +93,12 @@ class Repo:
    # def install
 
    def init( self, **kwargs ):
+      kw_verbose = kwargs.get( "verbose", False )
+      kw_quiet = kwargs.get( "quiet", False )
+
       command: str = f"{self.__tool} --trace --time init"
+      command += f" --verbose" if self.kw_verbose else ""
+      command += f" --quiet" if self.kw_quiet else ""
       command += f" --manifest-url={self.__manifest_url}"
       command += f" --manifest-name={self.__manifest_name}" if self.__manifest_name else ""
       command += f" --manifest-branch={self.__manifest_branch}" if self.__manifest_branch else ""
@@ -96,11 +110,16 @@ class Repo:
    # def init
 
    def sync( self ):
+      kw_verbose = kwargs.get( "verbose", False )
+      kw_quiet = kwargs.get( "quiet", False )
+
       command: str = f"{self.__tool} --trace --time sync"
       command += f" --current-branch"
       command += f" --no-clone-bundle"
       command += f" --no-tags"
       command += f" --fetch-submodules"
+      command += f" --verbose" if self.kw_verbose else ""
+      command += f" --quiet" if self.kw_quiet else ""
       result = pfw.shell.execute( command, cwd = self.__source_dir, output = pfw.shell.eOutput.PTY )
 
       return 0 == result["code"]
