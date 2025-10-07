@@ -95,6 +95,12 @@ class ConfigurationData:
       self.__values.extend( values_to_add )
    # def set_value_ext
 
+   # Clear all values and new one
+   def reset_value( self, value = None ):
+      self.__values.clear( )
+      self.set_value( value )
+   # def reset_value
+
    # Clear all values of variable
    def reset_value( self, name: str, value = None ):
       self.__values.clear( )
@@ -213,6 +219,13 @@ class ConfigurationContainer:
          self.__map[ name ] = ConfigurationData( name, False, "" )
 
       self.__map[ name ].set_value( value )
+   # def set_value
+
+   def reset_value( self, name: str, value ):
+      if name not in self.__map.keys( ):
+         self.__map[ name ] = ConfigurationData( name, False, "" )
+
+      self.__map[ name ].reset_value( value )
    # def set_value
 
    def get_values( self, name: str ):
@@ -347,12 +360,15 @@ def process_configuration( app_data, argv, **kwargs ):
    if kw_process_config_file:
       kw_process_config_file( app_data )
 
-   app_data.set_value( "application", os.path.dirname( os.path.realpath( sys.argv[0] ) ) )
-   if None == app_data.get_value( "pfw" ):
-      app_data.set_value( "pfw", "submodules/python_fw" )
-      print( "Using internal 'pfw': ", app_data.get_value( "pfw" ) )
-   else:
-      print( "Using external 'pfw': ", app_data.get_value( "pfw" ) )
+   current_application_path = os.path.dirname( os.path.realpath( sys.argv[0] ) )
+   app_data.set_value( "application", current_application_path )
+
+   used_pfw_path = app_data.get_value( "pfw" )
+   if not used_pfw_path:
+      used_pfw_path = "submodules/dterletskiy/python_fw"
+   if not os.path.isabs( used_pfw_path ):
+      used_pfw_path = os.path.join( current_application_path, used_pfw_path )
+   app_data.reset_value( "pfw", used_pfw_path )
 
    if False == app_data.is_complete( ):
       sys.exit( 1 )
