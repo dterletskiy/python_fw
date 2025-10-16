@@ -383,8 +383,8 @@ def process_configuration( app_data, argv, **kwargs ):
 
 config: ConfigurationContainer = ConfigurationContainer(
       [
-         ConfigurationData( "config"            , True  , "Path to configuration file" ),
-         ConfigurationData( "yaml_config"       , True  , "Path to yaml project configuration file" ),
+         ConfigurationData( "config"            , False  , "Path to configuration file" ),
+         ConfigurationData( "yaml_config"       , False  , "Path to yaml project configuration file" ),
          ConfigurationData( "include"           , False , "Additional directory to search import packages" ),
          ConfigurationData( "pfw"               , False , "Python Framework directory location" ),
          ConfigurationData( "component"         , False , "Component name" ),
