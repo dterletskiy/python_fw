@@ -231,7 +231,7 @@ def string_to_size( string, **kwargs ):
       return None
 
    size = float( match.group( 1 ) )
-   granularity = text_to_granularity( match.group( 2 ) )
+   granularity = text_to_granularity( match.group( 2 ), **kwargs )
 
    if not granularity:
       pfw.console.debug.error( f"dimention error" )

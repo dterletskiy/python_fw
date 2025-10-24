@@ -375,10 +375,23 @@ def attached_to( file: str, **kwargs ):
 # def mounted_to
 
 def map( file: str, **kwargs ):
+   """
+   This function gets the file image and on the first stage identifies the
+   image type: is this a partion image or device image.
+   On the second stage this function mounts image to the mount point according
+   to the image type:
+      - if image type is partion image then function mounts this image to the
+        mount point passed as parameter or to the default path = /tmp/loop_xxx
+      - if image type is device image this function attaches this image to the
+        first found free loop device and afterward mount its each partion
+        to the passed as the parameter with subdirectory indes which is corresponds
+        to the partion index.
+   """
+
    kw_mount_point = kwargs.get( "mount_point", tempfile.mkdtemp( prefix = "loop_" ) )
    kw_processor = kwargs.get( "processor", None )
 
-   description = info( file )
+   description = inspect( file )
    if isinstance( description, Device ):
       pfw.console.debug.info( f"image has {len( description.partitions( ) )} partitions" )
 
@@ -437,21 +450,13 @@ def info( image_file: str, **kwargs ):
       return None
 
 
-   def text_to_size( text: str ):
-      text_to_gran = {
+   text_to_gran = {
          "B": pfw.size.Size.eGran.B,
          "KiB": pfw.size.Size.eGran.K,
          "MiB": pfw.size.Size.eGran.M,
          "GiB": pfw.size.Size.eGran.G,
          "TiB": pfw.size.Size.eGran.T,
       }
-
-      match = re.match( pattern["size"], text )
-      if match:
-         return pfw.size.Size( float( f"{match.group(1)}.{match.group(2)}" ), text_to_gran[ match.group(3) ] )
-
-      return None
-   # def text_to_size
 
    parted_partitions = parted_output[2:]
    partitions: list = [ ]
@@ -462,9 +467,9 @@ def info( image_file: str, **kwargs ):
       parted_partition_items = parted_partition.split(":")
       partitions.append(
          Partition(
-            start = text_to_size( parted_partition_items[1] ),
-            end = text_to_size( parted_partition_items[2] ),
-            size = text_to_size( parted_partition_items[3] ),
+            start = pfw.size.string_to_size( parted_partition_items[1], dimentions = text_to_gran ),
+            end = pfw.size.string_to_size( parted_partition_items[2], dimentions = text_to_gran ),
+            size = pfw.size.string_to_size( parted_partition_items[3], dimentions = text_to_gran ),
             fs = pfw.linux.fs.builder( parted_partition_items[4] ),
             label = parted_partition_items[5]
          )
@@ -486,9 +491,19 @@ def info( image_file: str, **kwargs ):
    return image
 # def info
 
+def inspect( image_file: str, **kwargs ):
+   return info( image_file, **kwargs )
+# def inspect
+
 def init_device( file: str, device: Device, **kwargs ):
+   """
+   This function creates device image from the raw file according to passed
+   Device structure.
+   """
+
    file_size = pfw.file.file_size( file )
    if None == file_size:
+      pfw.console.debug.error( "invalid file size" )
       return False
    file_size = pfw.size.Size( pfw.file.file_size( file ), pfw.size.Size.eGran.B )
 
@@ -590,6 +605,6 @@ def init_device( file: str, device: Device, **kwargs ):
 # pfw.linux.image.init_device( image_file, device )
 
 # # cloning image
-# cloned_device = pfw.linux.image.info( image_file )
+# cloned_device = pfw.linux.image.inspect( image_file )
 # cloned_device.info( )
 # pfw.linux.image.init_device( f"{image_file}_clone", cloned_device )
