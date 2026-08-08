@@ -33,7 +33,26 @@ except ImportError:
 
 import pfw.base.configuration
 
-pfw.configuration.init( verbose = False )
+def process_cmdline( app_data, argv ):
+   pfw.console.debug.info( )
+
+def process_config_file( app_data ):
+   pfw.console.debug.info( )
+
+config = pfw.base.configuration.ConfigurationContainer(
+      [
+         # pfw.base.configuration.ConfigurationData( "include"   , False  , "_Additional directory to search import packages" ),
+         # pfw.base.configuration.ConfigurationData( "pfw"       , False  , "Python Framework directory location" ),
+      ]
+   )
+
+pfw.base.configuration.init(
+      verbose = False,
+      process_cmdline = process_cmdline,
+      process_config_file = process_config_file,
+      config = config
+   )
+pfw.base.configuration.info( )
 
 def main( ):
    app.main.main( )

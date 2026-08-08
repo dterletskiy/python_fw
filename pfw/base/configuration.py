@@ -8,10 +8,10 @@ import argparse
 
 
 class ConfigurationData:
-   def __init__( self, name: str, required: bool, destination: str ):
+   def __init__( self, name: str, required: bool, description: str ):
       self.__name = copy.deepcopy( name )
       self.__required = copy.deepcopy( required )
-      self.__description = copy.deepcopy( destination )
+      self.__description = copy.deepcopy( description )
       self.__values = [ ]
    # def __init__
 
@@ -355,6 +355,18 @@ def process_configuration( app_data, argv, **kwargs ):
    kw_process_cmdline = kwargs.get( "process_cmdline", process_cmdline )
    kw_process_config_file = kwargs.get( "process_config_file", process_config_file )
 
+
+   if not app_data.get_data( "pfw" ):
+      app_data.set_data( ConfigurationData(
+         "pfw", False, "Python Framework directory location" ) )
+   if not app_data.get_data( "include" ):
+      app_data.set_data( ConfigurationData(
+         "include", False, "Additional directory to search import packages" ) )
+   if not app_data.get_data( "config" ):
+      app_data.set_data( ConfigurationData(
+         "config", False, "Path to configuration file" ) )
+
+
    if kw_process_cmdline: 
       kw_process_cmdline( app_data, argv )
    if kw_process_config_file:
@@ -381,7 +393,7 @@ def process_configuration( app_data, argv, **kwargs ):
 
 
 
-config: ConfigurationContainer = ConfigurationContainer(
+config_default: ConfigurationContainer = ConfigurationContainer(
       [
          ConfigurationData( "config"            , False  , "Path to configuration file" ),
          ConfigurationData( "yaml_config"       , False  , "Path to yaml project configuration file" ),
@@ -413,6 +425,8 @@ def value( name: str, index: int = 0 ):
 
 
 
+config: ConfigurationContainer = None
+
 def init( argv = sys.argv[1:], **kwargs ):
    MIN_PYTHON = (3, 9)
    if sys.version_info < MIN_PYTHON:
@@ -420,6 +434,8 @@ def init( argv = sys.argv[1:], **kwargs ):
       print( "Current version is %s.%s" % ( sys.version_info.major, sys.version_info.minor ) )
       sys.exit( 255 )
 
+   global config
+   config = kwargs.get( "config", config_default )
    process_configuration( config, sys.argv[1:], **kwargs )
 
    kw_verbose = kwargs.get( "verbose", False )
