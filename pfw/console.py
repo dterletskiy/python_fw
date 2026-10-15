@@ -2,6 +2,7 @@ import sys
 import os
 import getpass
 import datetime
+import itertools
 import logging
 
 
@@ -118,7 +119,43 @@ class AnsiFormat:
    RESET          = Background.RESET + Foreground.RESET + Style.RESET
 
 Format            = AnsiFormat( )
+_LOGGER_IDS       = itertools.count( )
 
+
+
+class _AnsiFormatter( logging.Formatter ):
+   def format( self, record ):
+      string: str = ""
+      string += record.pfw_ansi_format if record.pfw_is_colored else ""
+      string += record.pfw_tabs * record.pfw_def_tabs
+      string += record.getMessage( )
+      string += Format.RESET if record.pfw_is_colored else ""
+
+      header: str = ""
+      if record.pfw_timestamp:
+         timestamp = datetime.datetime.fromtimestamp( record.created ).strftime( "%Y.%m.%d %H.%M.%S.%f" )
+         header += timestamp + ": "
+
+      if 1 == record.pfw_inspect:
+         header += "[" + record.funcName + ":" + str(record.lineno) + "] -> "
+      elif 2 == record.pfw_inspect:
+         header += "[" + record.pathname + ":" + record.funcName + ":" + str(record.lineno) + "] -> "
+
+      return header + string
+   # def format
+# class _AnsiFormatter
+
+
+class _AnsiHandler( logging.Handler ):
+   def emit( self, record ):
+      print(
+         self.format( record ),
+         end = record.pfw_end,
+         flush = record.pfw_flush,
+         file = record.pfw_file
+      )
+   # def emit
+# class _AnsiHandler
 
 
 class AnsiDebug:
@@ -126,13 +163,21 @@ class AnsiDebug:
       self.__is_colored = kwargs.get( "colored", None )
       self.__inspect: int = kwargs.get( "inspect", 0 )
       self.__timestamp: bool = kwargs.get( "timestamp", True )
-      self.__level: int = kwargs.get( "level", logging.DEBUG )
       self.__end: str = kwargs.get( "end", '\n' )
       self.__sep: str = kwargs.get( "sep", '' )
       self.__tabs: int = kwargs.get( "tabs", 0 )
       self.__def_tabs: str = kwargs.get( "def_tabs", "   " )
       self.__flush: bool = kwargs.get( "flush", False )
       self.__file = kwargs.get( "file", None )
+
+      logger_name = __name__ + ".AnsiDebug." + str( next(_LOGGER_IDS) )
+      self.__logger = logging.getLogger( logger_name )
+      self.__logger.setLevel( kwargs.get( "level", logging.DEBUG ) )
+      self.__logger.propagate = False
+
+      handler = _AnsiHandler( )
+      handler.setFormatter( _AnsiFormatter( ) )
+      self.__logger.addHandler( handler )
    # def __init__
 
    def header( self, *arguments, **kwargs ):
@@ -185,7 +230,7 @@ class AnsiDebug:
       kw_inspect: int = kwargs.get( "inspect", self.__inspect )
       kw_timestamp = kwargs.get( "timestamp", self.__timestamp )
 
-      if kw_level < self.__level:
+      if not self.__logger.isEnabledFor( kw_level ):
          return
 
       kw_file = kwargs.get( "file", self.__file )
@@ -198,25 +243,24 @@ class AnsiDebug:
          raise TypeError( "sep must be None or a string, not " + type( kw_sep ).__name__ )
 
       is_colored = self.__is_color_enabled( kw_file )
-      timestamp = datetime.datetime.now( ).strftime( "%Y.%m.%d %H.%M.%S.%f" ) if kw_timestamp else ""
+      message = kw_sep.join( str(arg) for arg in arguments )
 
-      string: str = ""
-      string += ansi_format if is_colored else ""
-      string += kw_tabs * kw_def_tabs
-      string += kw_sep.join( str(arg) for arg in arguments )
-      string += Format.RESET if is_colored else ""
-
-      header: str = f"{timestamp}: " if timestamp else ""
-      if 1 == kw_inspect:
-         frame = sys._getframe( 2 )
-         header += "[" + frame.f_code.co_name + ":" + str(frame.f_lineno) + "] -> "
-      elif 2 == kw_inspect:
-         frame = sys._getframe( 2 )
-         header += "[" + frame.f_code.co_filename + ":" + frame.f_code.co_name + ":" + str(frame.f_lineno) + "] -> "
-
-      print( header + string, end = kw_end, flush = kw_flush, file = kw_file )
-      # sys.stdout.write( header + string + "\n\r" )
-      # sys.stdout.flush( )
+      self.__logger.log(
+         kw_level,
+         message,
+         extra = {
+            "pfw_ansi_format": ansi_format,
+            "pfw_is_colored": is_colored,
+            "pfw_tabs": kw_tabs,
+            "pfw_def_tabs": kw_def_tabs,
+            "pfw_timestamp": kw_timestamp,
+            "pfw_inspect": kw_inspect,
+            "pfw_end": kw_end,
+            "pfw_flush": kw_flush,
+            "pfw_file": kw_file
+         },
+         stacklevel = 3
+      )
    # def write
 
    def prompt( self, string: str = "Press any key...", **kwargs ):
@@ -252,7 +296,7 @@ class AnsiDebug:
                "Asterisk prompts require the optional 'getch' package."
             ) from error
 
-         self.write( string, end = '', flush = True )
+         print( string, end = '', flush = True )
 
          passwor = ''
          while True:
@@ -304,8 +348,8 @@ class AnsiDebug:
    # def timestamp
 
    def level( self, value: int ):
-      _level = self.__level
-      self.__level = value
+      _level = self.__logger.level
+      self.__logger.setLevel( value )
       return _level
    # def level
 
