@@ -1,4 +1,5 @@
 import sys
+import os
 import inspect
 import getpass
 import datetime
@@ -123,7 +124,7 @@ Format            = AnsiFormat( )
 
 class AnsiDebug:
    def __init__( self, **kwargs ):
-      self.__is_colored: bool = kwargs.get( "colored", True )
+      self.__is_colored = kwargs.get( "colored", None )
       self.__inspect: int = kwargs.get( "inspect", 0 )
       self.__timestamp: bool = kwargs.get( "timestamp", True )
       self.__level: int = kwargs.get( "level", logging.DEBUG )
@@ -192,13 +193,14 @@ class AnsiDebug:
       if None == kw_file:
          kw_file = sys.stderr if logging.WARNING <= kw_level else sys.stdout
 
+      is_colored = self.__is_color_enabled( kw_file )
       timestamp = datetime.datetime.now( ).strftime( "%Y.%m.%d %H.%M.%S.%f" ) if kw_timestamp else ""
 
       string: str = ""
-      string += ansi_format if self.__is_colored else ""
+      string += ansi_format if is_colored else ""
       string += kw_tabs * kw_def_tabs
       string += ''.join( str(arg) for arg in arguments )
-      string += Format.RESET if self.__is_colored else ""
+      string += Format.RESET if is_colored else ""
 
       header: str = f"{timestamp}: " if timestamp else ""
       if 1 == kw_inspect:
@@ -216,7 +218,7 @@ class AnsiDebug:
    def prompt( self, string: str = "Press any key...", **kwargs ):
       kw_mask = kwargs.get( "mask", None )
 
-      message = Format.PROMT + string + Format.RESET if self.__is_colored else string
+      message = Format.PROMT + string + Format.RESET if self.__is_color_enabled( sys.stdout ) else string
 
       if None != kw_mask:
          try:
@@ -267,12 +269,25 @@ class AnsiDebug:
       elif "asterisk" == kw_type:
          caller = getpassword
 
-      message = Format.PROMT + string + Format.RESET if self.__is_colored else string
+      message = Format.PROMT + string + Format.RESET if self.__is_color_enabled( sys.stdout ) else string
 
       return caller( message )
    # def promt_dep
 
-   def colored( self, value: bool ):
+   def __is_color_enabled( self, file ):
+      if None != self.__is_colored:
+         return bool( self.__is_colored )
+
+      if "NO_COLOR" in os.environ or "dumb" == os.environ.get( "TERM", "" ).lower( ):
+         return False
+
+      try:
+         return bool( file.isatty( ) )
+      except ( AttributeError, OSError, ValueError ):
+         return False
+   # def __is_color_enabled
+
+   def colored( self, value ):
       _is_colored = self.__is_colored
       self.__is_colored = value
       return _is_colored
