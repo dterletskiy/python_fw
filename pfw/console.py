@@ -143,10 +143,6 @@ class AnsiDebug:
       self.write( Format.QUESTION, *arguments, **kwargs )
    # def question
 
-   def promt( self, *arguments, **kwargs ):
-      self.write( Format.PROMT, *arguments, **kwargs )
-   # def promt
-
    def trace( self, *arguments, **kwargs ):
       self.write( Format.TRACE, *arguments, **kwargs )
    # def trace
@@ -202,7 +198,7 @@ class AnsiDebug:
       # sys.stdout.flush( )
    # def write
 
-   def promt( self, string: str = "Press any key...", **kwargs ):
+   def prompt( self, string: str = "Press any key...", **kwargs ):
       kw_mask = kwargs.get( "mask", None )
 
       message = Format.PROMT + string + Format.RESET if self.__is_colored else string
@@ -211,6 +207,10 @@ class AnsiDebug:
          return pwinput.pwinput( prompt = message, mask = kw_mask )
       else:
          return input( message )
+   # def prompt
+
+   def promt( self, string: str = "Press any key...", **kwargs ):
+      return self.prompt( string, **kwargs )
    # def promt
 
    def promt_dep( self, string: str = "Press any key...", **kwargs ):
