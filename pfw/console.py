@@ -1,6 +1,5 @@
 import sys
 import os
-import inspect
 import getpass
 import datetime
 import logging
@@ -209,11 +208,11 @@ class AnsiDebug:
 
       header: str = f"{timestamp}: " if timestamp else ""
       if 1 == kw_inspect:
-         frame = inspect.stack( )[2]
-         header += "[" + frame.function + ":" + str(frame.lineno) + "] -> "
+         frame = sys._getframe( 2 )
+         header += "[" + frame.f_code.co_name + ":" + str(frame.f_lineno) + "] -> "
       elif 2 == kw_inspect:
-         frame = inspect.stack( )[2]
-         header += "[" + frame.filename + ":" + frame.function + ":" + str(frame.lineno) + "] -> "
+         frame = sys._getframe( 2 )
+         header += "[" + frame.f_code.co_filename + ":" + frame.f_code.co_name + ":" + str(frame.f_lineno) + "] -> "
 
       print( header + string, end = kw_end, flush = kw_flush, file = kw_file )
       # sys.stdout.write( header + string + "\n\r" )
