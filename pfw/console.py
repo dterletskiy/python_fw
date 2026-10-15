@@ -2,6 +2,7 @@ import sys
 import inspect
 import getpass
 import datetime
+import logging
 
 
 
@@ -125,6 +126,7 @@ class AnsiDebug:
       self.__is_colored: bool = kwargs.get( "colored", True )
       self.__inspect: int = kwargs.get( "inspect", 0 )
       self.__timestamp: bool = kwargs.get( "timestamp", True )
+      self.__level: int = kwargs.get( "level", logging.DEBUG )
       self.__end: str = kwargs.get( "end", '\n' )
       self.__sep: str = kwargs.get( "sep", '' )
       self.__tabs: int = kwargs.get( "tabs", 0 )
@@ -134,34 +136,42 @@ class AnsiDebug:
    # def __init__
 
    def header( self, *arguments, **kwargs ):
+      kwargs.setdefault( "level", logging.INFO )
       self.write( Format.HEADER, *arguments, **kwargs )
    # def header
 
    def question( self, *arguments, **kwargs ):
+      kwargs.setdefault( "level", logging.INFO )
       self.write( Format.QUESTION, *arguments, **kwargs )
    # def question
 
    def trace( self, *arguments, **kwargs ):
+      kwargs.setdefault( "level", logging.DEBUG )
       self.write( Format.TRACE, *arguments, **kwargs )
    # def trace
 
    def info( self, *arguments, **kwargs ):
+      kwargs.setdefault( "level", logging.INFO )
       self.write( Format.INFO, *arguments, **kwargs )
    # def info
 
    def ok( self, *arguments, **kwargs ):
+      kwargs.setdefault( "level", logging.INFO )
       self.write( Format.OK, *arguments, **kwargs )
    # def ok
 
    def warning( self, *arguments, **kwargs ):
+      kwargs.setdefault( "level", logging.WARNING )
       self.write( Format.WARNING, *arguments, **kwargs )
    # def warning
 
    def error( self, *arguments, **kwargs ):
+      kwargs.setdefault( "level", logging.ERROR )
       self.write( Format.ERROR, *arguments, **kwargs )
    # def error
 
    def marker( self, *arguments, **kwargs ):
+      kwargs.setdefault( "level", logging.ERROR )
       self.write( Format.ERROR, "-------------------------", *arguments, "-------------------------", **kwargs )
    # def marker
 
@@ -171,9 +181,16 @@ class AnsiDebug:
       kw_end: str = kwargs.get( "end", self.__end )
       kw_sep: str = kwargs.get( "sep", self.__sep )
       kw_flush: bool = kwargs.get( "flush", self.__flush )
-      kw_file = kwargs.get( "file", self.__file )
+      kw_level: int = kwargs.get( "level", logging.INFO )
       kw_inspect: int = kwargs.get( "inspect", self.__inspect )
       kw_timestamp = kwargs.get( "timestamp", self.__timestamp )
+
+      if kw_level < self.__level:
+         return
+
+      kw_file = kwargs.get( "file", self.__file )
+      if None == kw_file:
+         kw_file = sys.stderr if logging.WARNING <= kw_level else sys.stdout
 
       timestamp = datetime.datetime.now( ).strftime( "%Y.%m.%d %H.%M.%S.%f" ) if kw_timestamp else ""
 
@@ -266,6 +283,12 @@ class AnsiDebug:
       self.__timestamp = value
       return _timestamp
    # def timestamp
+
+   def level( self, value: int ):
+      _level = self.__level
+      self.__level = value
+      return _level
+   # def level
 
 # class AnsiDebug
 
