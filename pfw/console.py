@@ -132,7 +132,7 @@ class AnsiDebug:
       self.__tabs: int = kwargs.get( "tabs", 0 )
       self.__def_tabs: str = kwargs.get( "def_tabs", "   " )
       self.__flush: bool = kwargs.get( "flush", False )
-      self.__file = kwargs.get( "file", sys.stdout )
+      self.__file = kwargs.get( "file", None )
    # def __init__
 
    def header( self, *arguments, **kwargs ):
