@@ -120,6 +120,33 @@ class AnsiFormat:
 
 Format            = AnsiFormat( )
 _LOGGER_IDS       = itertools.count( )
+_UNSET             = object( )
+_GLOBAL_COLORED    = None
+_GLOBAL_TIMESTAMP  = True
+
+
+def configure( *, colored = _UNSET, timestamp = _UNSET ):
+   """Configure application-wide defaults for console logging."""
+   global _GLOBAL_COLORED
+   global _GLOBAL_TIMESTAMP
+
+   if colored is not _UNSET and None != colored and not isinstance( colored, bool ):
+      raise TypeError( "colored must be True, False, or None" )
+   if timestamp is not _UNSET and not isinstance( timestamp, bool ):
+      raise TypeError( "timestamp must be a bool" )
+
+   previous = {
+      "colored": _GLOBAL_COLORED,
+      "timestamp": _GLOBAL_TIMESTAMP
+   }
+
+   if colored is not _UNSET:
+      _GLOBAL_COLORED = colored
+   if timestamp is not _UNSET:
+      _GLOBAL_TIMESTAMP = timestamp
+
+   return previous
+# def configure
 
 
 
@@ -160,9 +187,9 @@ class _AnsiHandler( logging.Handler ):
 
 class AnsiDebug:
    def __init__( self, **kwargs ):
-      self.__is_colored = kwargs.get( "colored", None )
+      self.__is_colored = kwargs.get( "colored", _UNSET )
       self.__inspect: int = kwargs.get( "inspect", 0 )
-      self.__timestamp: bool = kwargs.get( "timestamp", True )
+      self.__timestamp = kwargs.get( "timestamp", _UNSET )
       self.__end: str = kwargs.get( "end", '\n' )
       self.__sep: str = kwargs.get( "sep", '' )
       self.__tabs: int = kwargs.get( "tabs", 0 )
@@ -228,7 +255,8 @@ class AnsiDebug:
       kw_flush: bool = kwargs.get( "flush", self.__flush )
       kw_level: int = kwargs.get( "level", logging.INFO )
       kw_inspect: int = kwargs.get( "inspect", self.__inspect )
-      kw_timestamp = kwargs.get( "timestamp", self.__timestamp )
+      kw_timestamp = kwargs.get( "timestamp", self.__effective_timestamp( ) )
+      kw_colored = kwargs.get( "colored", _UNSET )
 
       if not self.__logger.isEnabledFor( kw_level ):
          return
@@ -242,7 +270,7 @@ class AnsiDebug:
       elif not isinstance( kw_sep, str ):
          raise TypeError( "sep must be None or a string, not " + type( kw_sep ).__name__ )
 
-      is_colored = self.__is_color_enabled( kw_file )
+      is_colored = self.__is_color_enabled( kw_file, kw_colored )
       message = kw_sep.join( str(arg) for arg in arguments )
 
       self.__logger.log(
@@ -266,7 +294,9 @@ class AnsiDebug:
    def prompt( self, string: str = "Press any key...", **kwargs ):
       kw_mask = kwargs.get( "mask", None )
 
-      message = Format.PROMT + string + Format.RESET if self.__is_color_enabled( sys.stdout ) else string
+      message = Format.PROMT + string + Format.RESET if self.__is_color_enabled(
+         sys.stdout, kwargs.get( "colored", _UNSET )
+      ) else string
 
       if None != kw_mask:
          try:
@@ -317,14 +347,31 @@ class AnsiDebug:
       elif "asterisk" == kw_type:
          caller = getpassword
 
-      message = Format.PROMT + string + Format.RESET if self.__is_color_enabled( sys.stdout ) else string
+      message = Format.PROMT + string + Format.RESET if self.__is_color_enabled(
+         sys.stdout, kwargs.get( "colored", _UNSET )
+      ) else string
 
       return caller( message )
    # def promt_dep
 
-   def __is_color_enabled( self, file ):
-      if None != self.__is_colored:
-         return bool( self.__is_colored )
+   def __effective_colored( self ):
+      if self.__is_colored is _UNSET:
+         return _GLOBAL_COLORED
+      return self.__is_colored
+   # def __effective_colored
+
+   def __effective_timestamp( self ):
+      if self.__timestamp is _UNSET:
+         return _GLOBAL_TIMESTAMP
+      return self.__timestamp
+   # def __effective_timestamp
+
+   def __is_color_enabled( self, file, colored = _UNSET ):
+      if colored is _UNSET:
+         colored = self.__effective_colored( )
+
+      if None != colored:
+         return bool( colored )
 
       if "NO_COLOR" in os.environ or "dumb" == os.environ.get( "TERM", "" ).lower( ):
          return False
@@ -336,13 +383,13 @@ class AnsiDebug:
    # def __is_color_enabled
 
    def colored( self, value ):
-      _is_colored = self.__is_colored
+      _is_colored = self.__effective_colored( )
       self.__is_colored = value
       return _is_colored
    # def colored
 
    def timestamp( self, value: bool ):
-      _timestamp = self.__timestamp
+      _timestamp = self.__effective_timestamp( )
       self.__timestamp = value
       return _timestamp
    # def timestamp
