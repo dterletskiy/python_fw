@@ -193,13 +193,18 @@ class AnsiDebug:
       if None == kw_file:
          kw_file = sys.stderr if logging.WARNING <= kw_level else sys.stdout
 
+      if None == kw_sep:
+         kw_sep = ' '
+      elif not isinstance( kw_sep, str ):
+         raise TypeError( "sep must be None or a string, not " + type( kw_sep ).__name__ )
+
       is_colored = self.__is_color_enabled( kw_file )
       timestamp = datetime.datetime.now( ).strftime( "%Y.%m.%d %H.%M.%S.%f" ) if kw_timestamp else ""
 
       string: str = ""
       string += ansi_format if is_colored else ""
       string += kw_tabs * kw_def_tabs
-      string += ''.join( str(arg) for arg in arguments )
+      string += kw_sep.join( str(arg) for arg in arguments )
       string += Format.RESET if is_colored else ""
 
       header: str = f"{timestamp}: " if timestamp else ""
@@ -210,7 +215,7 @@ class AnsiDebug:
          frame = inspect.stack( )[2]
          header += "[" + frame.filename + ":" + frame.function + ":" + str(frame.lineno) + "] -> "
 
-      print( header, string, end = kw_end, sep = kw_sep, flush = kw_flush, file = kw_file )
+      print( header + string, end = kw_end, flush = kw_flush, file = kw_file )
       # sys.stdout.write( header + string + "\n\r" )
       # sys.stdout.flush( )
    # def write
