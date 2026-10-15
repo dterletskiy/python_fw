@@ -125,7 +125,7 @@ class AnsiDebug:
       self.__is_colored: bool = kwargs.get( "colored", True )
       self.__inspect: int = kwargs.get( "inspect", 0 )
       self.__timestamp: bool = kwargs.get( "timestamp", True )
-      self.__end: str = kwargs.get( "end", '\n\r' )
+      self.__end: str = kwargs.get( "end", '\n' )
       self.__sep: str = kwargs.get( "sep", '' )
       self.__tabs: int = kwargs.get( "tabs", 0 )
       self.__def_tabs: str = kwargs.get( "def_tabs", "   " )
