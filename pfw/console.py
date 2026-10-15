@@ -1,8 +1,6 @@
 import sys
 import inspect
 import getpass
-import getch
-import pwinput
 import datetime
 
 
@@ -204,6 +202,13 @@ class AnsiDebug:
       message = Format.PROMT + string + Format.RESET if self.__is_colored else string
 
       if None != kw_mask:
+         try:
+            import pwinput
+         except ModuleNotFoundError as error:
+            raise ModuleNotFoundError(
+               "Masked prompts require the optional 'pwinput' package."
+            ) from error
+
          return pwinput.pwinput( prompt = message, mask = kw_mask )
       else:
          return input( message )
@@ -217,6 +222,13 @@ class AnsiDebug:
       kw_type = kwargs.get( "type", "show" )
 
       def getpassword( string ):
+         try:
+            import getch
+         except ModuleNotFoundError as error:
+            raise ModuleNotFoundError(
+               "Asterisk prompts require the optional 'getch' package."
+            ) from error
+
          self.write( string, end = '', flush = True )
 
          passwor = ''
