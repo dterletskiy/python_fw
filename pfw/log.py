@@ -11,6 +11,7 @@ TRACE = 5
 _LOGGER_IDS = itertools.count( )
 _UNSET = object( )
 _GLOBAL_TIMESTAMP = True
+_GLOBAL_FILE = None
 
 logging.addLevelName( TRACE, "TRACE" )
 
@@ -31,24 +32,30 @@ Format = AnsiFormat( )
 
 
 
-def configure( *, colored = _UNSET, timestamp = _UNSET ):
+def configure( *, colored = _UNSET, timestamp = _UNSET, file = _UNSET ):
    """Configure application-wide defaults for console logging."""
+   global _GLOBAL_FILE
    global _GLOBAL_TIMESTAMP
 
    if colored is not _UNSET and None != colored and not isinstance( colored, bool ):
       raise TypeError( "colored must be True, False, or None" )
    if timestamp is not _UNSET and not isinstance( timestamp, bool ):
       raise TypeError( "timestamp must be a bool" )
+   if file is not _UNSET and None != file and not callable( getattr(file, "write", None) ):
+      raise TypeError( "file must be None or a writable stream" )
 
    previous = {
       "colored": terminal.get_color_mode( ),
-      "timestamp": _GLOBAL_TIMESTAMP
+      "timestamp": _GLOBAL_TIMESTAMP,
+      "file": _GLOBAL_FILE
    }
 
    if colored is not _UNSET:
       terminal.set_color_mode( colored )
    if timestamp is not _UNSET:
       _GLOBAL_TIMESTAMP = timestamp
+   if file is not _UNSET:
+      _GLOBAL_FILE = file
 
    return previous
 
@@ -105,7 +112,7 @@ class ConsoleLogger:
       self.__tabs: int = kwargs.get( "tabs", 0 )
       self.__def_tabs: str = kwargs.get( "def_tabs", "   " )
       self.__flush: bool = kwargs.get( "flush", False )
-      self.__file = kwargs.get( "file", None )
+      self.__file = kwargs.get( "file", _UNSET )
 
       logger_name = __name__ + ".ConsoleLogger." + str( next(_LOGGER_IDS) )
       self.__logger = logging.getLogger( logger_name )
@@ -170,7 +177,7 @@ class ConsoleLogger:
       if not self.__logger.isEnabledFor( kw_level ):
          return
 
-      kw_file = kwargs.get( "file", self.__file )
+      kw_file = kwargs.get( "file", self.__effective_file( ) )
       if None == kw_file:
          kw_file = sys.stderr if logging.WARNING <= kw_level else sys.stdout
 
@@ -228,6 +235,11 @@ class ConsoleLogger:
       if self.__timestamp is _UNSET:
          return _GLOBAL_TIMESTAMP
       return self.__timestamp
+
+   def __effective_file( self ):
+      if self.__file is _UNSET:
+         return _GLOBAL_FILE
+      return self.__file
 
    def colored( self, value ):
       previous = self.__effective_colored( )
