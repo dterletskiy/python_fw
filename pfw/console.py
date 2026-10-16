@@ -107,22 +107,23 @@ Cursor            = AnsiCursor( )
 
 
 class AnsiFormat:
-   QUESTION       = Foreground.MAGENTA
    PROMT          = Foreground.MAGENTA
-   INTERACTION    = Foreground.MAGENTA
-   HEADER         = Foreground.LIGHTMAGENTA
-   TRACE          = Foreground.RESET
+   TRACE          = Foreground.LIGHTBLACK
+   DEBUG          = Foreground.LIGHTCYAN
    INFO           = Foreground.LIGHTYELLOW
-   OK             = Foreground.GREEN
    ERROR          = Foreground.RED
    WARNING        = Foreground.LIGHTBLUE
+   CRITICAL       = Style.BOLD + Foreground.LIGHTRED
    RESET          = Background.RESET + Foreground.RESET + Style.RESET
 
 Format            = AnsiFormat( )
+TRACE             = 5
 _LOGGER_IDS       = itertools.count( )
 _UNSET             = object( )
 _GLOBAL_COLORED    = None
 _GLOBAL_TIMESTAMP  = True
+
+logging.addLevelName( TRACE, "TRACE" )
 
 
 def configure( *, colored = _UNSET, timestamp = _UNSET ):
@@ -168,7 +169,17 @@ class _AnsiFormatter( logging.Formatter ):
       elif 2 == record.pfw_inspect:
          header += "[" + record.pathname + ":" + record.funcName + ":" + str(record.lineno) + "] -> "
 
-      return header + string
+      result = header + string
+
+      if record.exc_info:
+         if not record.exc_text:
+            record.exc_text = self.formatException( record.exc_info )
+         result += "\n" + record.exc_text
+
+      if record.stack_info:
+         result += "\n" + self.formatStack( record.stack_info )
+
+      return result
    # def format
 # class _AnsiFormatter
 
@@ -199,7 +210,7 @@ class AnsiDebug:
 
       logger_name = __name__ + ".AnsiDebug." + str( next(_LOGGER_IDS) )
       self.__logger = logging.getLogger( logger_name )
-      self.__logger.setLevel( kwargs.get( "level", logging.DEBUG ) )
+      self.__logger.setLevel( kwargs.get( "level", TRACE ) )
       self.__logger.propagate = False
 
       handler = _AnsiHandler( )
@@ -207,30 +218,20 @@ class AnsiDebug:
       self.__logger.addHandler( handler )
    # def __init__
 
-   def header( self, *arguments, **kwargs ):
-      kwargs.setdefault( "level", logging.INFO )
-      self.write( Format.HEADER, *arguments, **kwargs )
-   # def header
-
-   def question( self, *arguments, **kwargs ):
-      kwargs.setdefault( "level", logging.INFO )
-      self.write( Format.QUESTION, *arguments, **kwargs )
-   # def question
-
    def trace( self, *arguments, **kwargs ):
-      kwargs.setdefault( "level", logging.DEBUG )
+      kwargs.setdefault( "level", TRACE )
       self.write( Format.TRACE, *arguments, **kwargs )
    # def trace
+
+   def debug( self, *arguments, **kwargs ):
+      kwargs.setdefault( "level", logging.DEBUG )
+      self.write( Format.DEBUG, *arguments, **kwargs )
+   # def debug
 
    def info( self, *arguments, **kwargs ):
       kwargs.setdefault( "level", logging.INFO )
       self.write( Format.INFO, *arguments, **kwargs )
    # def info
-
-   def ok( self, *arguments, **kwargs ):
-      kwargs.setdefault( "level", logging.INFO )
-      self.write( Format.OK, *arguments, **kwargs )
-   # def ok
 
    def warning( self, *arguments, **kwargs ):
       kwargs.setdefault( "level", logging.WARNING )
@@ -242,10 +243,24 @@ class AnsiDebug:
       self.write( Format.ERROR, *arguments, **kwargs )
    # def error
 
-   def marker( self, *arguments, **kwargs ):
+   def critical( self, *arguments, **kwargs ):
+      kwargs.setdefault( "level", logging.CRITICAL )
+      self.write( Format.CRITICAL, *arguments, **kwargs )
+   # def critical
+
+   def exception( self, *arguments, **kwargs ):
       kwargs.setdefault( "level", logging.ERROR )
-      self.write( Format.ERROR, "-------------------------", *arguments, "-------------------------", **kwargs )
-   # def marker
+      kwargs.setdefault( "exc_info", True )
+      self.write( Format.ERROR, *arguments, **kwargs )
+   # def exception
+
+   def log( self, level, *arguments, **kwargs ):
+      if not isinstance( level, int ):
+         raise TypeError( "level must be an integer" )
+
+      kwargs["level"] = level
+      self.write( self.__format_for_level(level), *arguments, **kwargs )
+   # def log
 
    def write( self, ansi_format, *arguments, **kwargs ):
       kw_tabs: int = kwargs.get( "tabs", self.__tabs )
@@ -257,6 +272,10 @@ class AnsiDebug:
       kw_inspect: int = kwargs.get( "inspect", self.__inspect )
       kw_timestamp = kwargs.get( "timestamp", self.__effective_timestamp( ) )
       kw_colored = kwargs.get( "colored", _UNSET )
+      kw_exc_info = kwargs.get( "exc_info", None )
+      kw_extra = kwargs.get( "extra", None )
+      kw_stack_info: bool = kwargs.get( "stack_info", False )
+      kw_stacklevel: int = kwargs.get( "stacklevel", 1 )
 
       if not self.__logger.isEnabledFor( kw_level ):
          return
@@ -273,23 +292,42 @@ class AnsiDebug:
       is_colored = self.__is_color_enabled( kw_file, kw_colored )
       message = kw_sep.join( str(arg) for arg in arguments )
 
+      extra = { } if None == kw_extra else dict( kw_extra )
+      extra.update({
+         "pfw_ansi_format": ansi_format,
+         "pfw_is_colored": is_colored,
+         "pfw_tabs": kw_tabs,
+         "pfw_def_tabs": kw_def_tabs,
+         "pfw_timestamp": kw_timestamp,
+         "pfw_inspect": kw_inspect,
+         "pfw_end": kw_end,
+         "pfw_flush": kw_flush,
+         "pfw_file": kw_file
+      })
+
       self.__logger.log(
          kw_level,
          message,
-         extra = {
-            "pfw_ansi_format": ansi_format,
-            "pfw_is_colored": is_colored,
-            "pfw_tabs": kw_tabs,
-            "pfw_def_tabs": kw_def_tabs,
-            "pfw_timestamp": kw_timestamp,
-            "pfw_inspect": kw_inspect,
-            "pfw_end": kw_end,
-            "pfw_flush": kw_flush,
-            "pfw_file": kw_file
-         },
-         stacklevel = 3
+         exc_info = kw_exc_info,
+         extra = extra,
+         stack_info = kw_stack_info,
+         stacklevel = kw_stacklevel + 2
       )
    # def write
+
+   def __format_for_level( self, level ):
+      if logging.CRITICAL <= level:
+         return Format.CRITICAL
+      if logging.ERROR <= level:
+         return Format.ERROR
+      if logging.WARNING <= level:
+         return Format.WARNING
+      if logging.INFO <= level:
+         return Format.INFO
+      if logging.DEBUG <= level:
+         return Format.DEBUG
+      return Format.TRACE
+   # def __format_for_level
 
    def prompt( self, string: str = "Press any key...", **kwargs ):
       kw_mask = kwargs.get( "mask", None )
@@ -403,6 +441,7 @@ class AnsiDebug:
 # class AnsiDebug
 
 printf            = AnsiDebug( inspect = 0 )
-debug             = AnsiDebug( inspect = 1 )
+log               = AnsiDebug( inspect = 1 )
+debug             = log
 
 
