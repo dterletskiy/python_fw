@@ -25,6 +25,10 @@ console.printf.warning("Warning")
 answer = console.prompt("Value: ")
 ```
 
+Because `configure` is re-exported directly, `console.configure(file=stream)`
+also sets the application-wide default logging stream. New code should prefer
+the equivalent `pfw.log.configure()` call.
+
 ## Migration
 
 Existing code:

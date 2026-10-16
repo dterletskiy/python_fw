@@ -25,6 +25,7 @@ from pfw import log
 previous = log.configure(
     colored=None,
     timestamp=False,
+    file=None,
 )
 
 try:
@@ -35,6 +36,11 @@ finally:
 
 `log.configure()` returns the previous global values. This is useful in tests,
 scripts, and other contexts where temporary settings must be restored.
+
+Pass an open text stream as `file` to make it the default destination for all
+existing and future loggers. `file=None` restores automatic `stdout`/`stderr`
+routing. The caller remains responsible for keeping the configured stream open
+and closing it after restoring the previous configuration.
 
 Supported `colored` values:
 

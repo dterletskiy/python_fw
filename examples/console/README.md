@@ -11,6 +11,7 @@ Run all commands from the repository root:
 
 ```bash
 python3 -m examples.console.basic_output
+python3 -m examples.console.file_logging --output pfw-example.log
 python3 -m examples.console.global_configuration
 python3 -m examples.console.logger_levels
 python3 -m examples.console.terminal_sequences
@@ -21,6 +22,8 @@ python3 -m examples.console.terminal_sequences
 - `basic_output.py` — module-level `pfw.log` functions, the `printf` facade,
   standard message levels, the custom `TRACE` level, `stdout`/`stderr` routing,
   separators, indentation, line endings, and timestamps.
+- `file_logging.py` — configure an application-wide default file and append
+  plain-text messages with timestamps to the path selected through `--output`.
 - `global_configuration.py` — the global `configure()` function and setting
   precedence between individual calls, `ConsoleLogger` instances, and global
   defaults.
@@ -56,3 +59,14 @@ log.info("Automatic color without a timestamp")
 `NO_COLOR`, and `TERM=dumb`. Explicit `ConsoleLogger` settings override global
 defaults, and parameters passed to an individual call have the highest
 priority.
+
+## File Logging
+
+```bash
+python3 -m examples.console.file_logging --output application.log
+```
+
+The example opens the selected file in append mode, installs it through
+`log.configure(file=stream)`, writes messages from several severity levels, and
+restores the previous global configuration before closing the stream. ANSI
+colors are disabled so the resulting file remains plain text.

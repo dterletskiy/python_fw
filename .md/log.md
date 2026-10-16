@@ -58,19 +58,46 @@ log.log(log.TRACE, "Custom level")
 ## Global Configuration
 
 ```python
-previous = log.configure(colored=None, timestamp=False)
+previous = log.configure(colored=None, timestamp=False, file=None)
 ```
 
 - `colored=None` — automatic mode;
 - `colored=True` — force ANSI output;
 - `colored=False` — disable ANSI output;
-- `timestamp=True/False` — configure the global timestamp default.
+- `timestamp=True/False` — configure the global timestamp default;
+- `file=<stream>` — send all messages to an open writable stream by default;
+- `file=None` — restore automatic `stdout`/`stderr` routing.
+
+The global file applies immediately to existing and future loggers that do not
+have an instance-level file. The caller owns the stream and must keep it open
+while it is configured. An instance or individual call can pass its own stream;
+passing `file=None` at either level bypasses the global file and restores
+severity-based `stdout`/`stderr` routing for that logger or call.
+
+```python
+from pfw import log
+
+with open("application.log", "a", encoding="utf-8") as stream:
+    previous = log.configure(
+        file=stream,
+        colored=False,
+        timestamp=True,
+    )
+    try:
+        log.info("Application started")
+        log.error("Operation failed")
+    finally:
+        log.configure(**previous)
+```
 
 Configuration precedence, from highest to lowest:
 
 1. parameters passed to an individual call;
 2. `ConsoleLogger` instance parameters;
 3. values set through `log.configure()`.
+
+`configure()` returns the previous `colored`, `timestamp`, and `file` values,
+so the complete global state can be restored with `log.configure(**previous)`.
 
 ## `ConsoleLogger` Parameters
 

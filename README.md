@@ -40,6 +40,10 @@ log.error("The operation failed")
 `colored=None` enables automatic color detection based on TTY support,
 `NO_COLOR`, and `TERM=dumb`.
 
+An open writable stream can be configured as the application-wide default with
+`log.configure(file=stream)`. See [`pfw.log`](.md/log.md#global-configuration)
+for lifecycle and override rules.
+
 ## Modules
 
 | Module | Purpose | Status |
@@ -59,6 +63,7 @@ Runnable examples are located in `examples/console`:
 
 ```bash
 python3 -m examples.console.basic_output
+python3 -m examples.console.file_logging --output pfw-example.log
 python3 -m examples.console.global_configuration
 python3 -m examples.console.logger_levels
 python3 -m examples.console.terminal_sequences
