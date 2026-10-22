@@ -6,8 +6,8 @@ practical library and as a place to explore Python framework design.
 
 > The project is being modernized incrementally. New code should use the
 > focused `pfw.log`, `pfw.terminal`, and `pfw.prompt` modules. `pfw.console`
-> remains available as a compatibility layer, while `pfw.shell` is currently a
-> legacy API.
+> remains available as a compatibility layer. `pfw.shell` provides structured
+> command execution without implicit shell interpretation.
 
 ## Documentation
 
@@ -52,14 +52,14 @@ for lifecycle and override rules.
 | [`pfw.terminal`](.md/terminal.md) | ANSI sequences, colors, cursor control, and color policy | Primary API |
 | [`pfw.prompt`](.md/prompt.md) | Plain, hidden, and masked input | Primary API |
 | [`pfw.console`](.md/console.md) | Re-exports of the former console API | Compatibility |
-| [`pfw.shell`](.md/shell.md) | Command construction and external process execution | Legacy, being modernized |
+| [`pfw.shell`](.md/shell.md) | Structured commands, PIPE/PTY streaming, SSH, sudo, and chroot | Primary API |
 
 See [Architecture and modules](.md/modules.md) for the dependency layout and
 API selection guidelines.
 
 ## Examples
 
-Runnable examples are located in `examples/console`:
+Console examples are located in `examples/console`:
 
 ```bash
 python3 -m examples.console.basic_output
@@ -72,6 +72,20 @@ python3 -m examples.console.interactive_prompts --mode plain
 
 The interactive `masked` and `asterisk` modes use the optional `pwinput` and
 `getch` dependencies respectively.
+
+Shell examples are located in `examples/shell`:
+
+```bash
+python3 -m examples.shell.structured_command
+python3 -m examples.shell.shell_pipeline
+python3 -m examples.shell.streaming_output
+python3 -m examples.shell.pty_output
+python3 -m examples.shell.dry_run_adapters
+python3 -m examples.shell.command_logging --output shell-commands.log
+```
+
+See [`examples/shell/README.md`](examples/shell/README.md) for the purpose and
+safety boundary of each example.
 
 ## Tests
 

@@ -13,7 +13,7 @@ pfw.log  pfw.prompt
    ↑       ↑
    pfw.console  (compatibility facade)
 
-pfw.shell  (legacy commands and processes)
+pfw.shell  (commands and external processes)
 ```
 
 ## Primary Modules
@@ -55,9 +55,8 @@ modules directly.
 
 ### `pfw.shell`
 
-A legacy module for command construction and synchronous process execution
-through pipes or a pseudo-terminal. The API remains available but has not yet
-received the same decomposition and stabilization as the console modules.
+A structured command runner with PIPE and PTY streaming, explicit shell mode,
+timeouts, callbacks, command logging, and typed sudo/chroot/SSH adapters.
 
 [Full `pfw.shell` documentation](shell.md)
 
@@ -67,5 +66,5 @@ received the same decomposition and stabilization as the console modules.
 2. Import `pfw.prompt` only in interactive application layers.
 3. Generate control sequences through `pfw.terminal`, but consider the target
    stream capabilities before writing them.
-4. Do not pass untrusted data to `pfw.shell`: the legacy API works with command
-   strings and shell interpretation by default.
+4. Use `pfw.shell.run()` with an argument sequence for untrusted values. Reserve
+   `run_shell()` for scripts that intentionally require shell syntax.
